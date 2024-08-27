@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta name="viewport" content="width=device-width" />
+    <title>Living Dex - {{ current_game }}</title>
+    <link rel="stylesheet" href="{{ static("main.css") }}" />
+  </head>
+  <body>
+    <header>
+      <menu>
+        {% for game_id, game_name in all_games.items() %}
+          <li>
+            <a
+              href="{{ url("game", game_id=game_id) }}"
+              {% if game_id == current_game_id %}class="active"{% endif %}
+            >
+              {{ game_name }}
+            </a>
+          </li>
+        {% endfor %}
+      </menu>
+    </header>
+    <main {% if gb_gbc %}data-gb-gbc{% endif %}>
+      {% for box_data in expected_data %}
+        {% set box_id = loop.index0 %}
+        <section class="box">
+          <div class="box-label">{{ loop.index }}</div>
+          <div class="box-content">
+            {% for pokemon in box_data %}
+              <div
+                {% if game_data[box_id][loop.index0] %}
+                  class="{% if pokemon == game_data[box_id][loop.index0] %}caught{% else %}wrong{% endif %}"
+                {% endif %}
+              >
+                {{ pokemon }}
+              </div>
+              {% if loop.last %}
+                {% for _ in range(loop.index0 % box_columns + 1, box_columns) %}
+                  <div class="filler"></div>
+                {% endfor %}
+              {% endif %}
+            {% endfor %}
+          </div>
+        </section>
+      {% endfor %}
+    </main>
+  </body>
+</html>

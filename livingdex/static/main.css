@@ -1,0 +1,107 @@
+:root {
+  --text-color: light-dark(#000, #ddd);
+  --text-color-negative: light-dark(#ddd, #000);
+
+  --background-primary: light-dark(#fff, #222);
+
+  --background-caught: light-dark(#bda, #251);
+  --background-wrong: light-dark(#eaa, #611);
+
+  font-size: 16px;
+  font-family: system-ui;
+  color: var(--text-color);
+  background-color: var(--background-primary);
+
+  color-scheme: light dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+}
+
+header {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background-color: var(--background-primary);
+  border-bottom: 4px solid;
+  menu {
+    margin: 0;
+    padding: 0;
+    list-style-type: none;
+    display: flex;
+    justify-content: safe center;
+    overflow-x: auto;
+    li {
+      a {
+        display: inline-block;
+        padding: 0.5em 1em;
+        color: inherit;
+        white-space: nowrap;
+        font-weight: bold;
+        text-decoration: none;
+        &.active,
+        &:hover {
+          color: var(--text-color-negative);
+          background-color: var(--text-color);
+        }
+      }
+    }
+  }
+}
+
+main {
+  --box-columns: 6;
+  margin-bottom: 1em;
+  &[data-gb-gbc] {
+    --box-columns: 5;
+  }
+  .box {
+    display: flex;
+    justify-content: safe center;
+    overflow-x: auto;
+    .box-label {
+      position: sticky;
+      left: 0;
+      background-color: var(--background-primary);
+      border: 4px solid;
+      border-top-width: 0;
+      font-size: 3em;
+      width: 4ch;
+      text-align: center;
+      align-content: center;
+      &:not(:has(~ .box-content > div:not(:is(.caught, .filler)))) {
+        background-color: var(--background-caught);
+      }
+      &:has(~ .box-content > div.wrong) {
+        background-color: var(--background-wrong);
+      }
+    }
+    .box-content {
+      display: grid;
+      grid-template-columns: repeat(var(--box-columns), 20ch);
+      gap: 1px;
+      background-color: var(--text-color);
+      border: solid;
+      border-width: 0 4px 4px 0;
+      > div {
+        text-align: center;
+        line-height: 3em;
+        background-color: var(--background-primary);
+        &:nth-child(6n + 1) {
+          border-left-width: 0;
+        }
+        &.caught {
+          background-color: var(--background-caught);
+        }
+        &.wrong {
+          background-color: var(--background-wrong);
+        }
+      }
+    }
+  }
+}
