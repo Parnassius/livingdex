@@ -52,16 +52,20 @@ def parse(save: Path, sub_parser: str) -> list[list[str]]:
                     pokemon = ""
                 else:
                     sections = _sections_positions[((pid >> 13) & 0x1F) % 24]
-                    pokemon_info = _indices[data[sections[0] * 16] & 0xFFFF]
-                    if isinstance(pokemon_info, tuple):
-                        form = pokemon_info[1][
-                            (data[sections[1] * 16 + 12] & 0xFF) >> 3
-                        ]
-                        pokemon = pokemon_info[0]
-                        if form:
-                            pokemon += f"-{form}"
+                    is_egg = (data[sections[1] * 16 + 9] >> 14) & 1
+                    if is_egg:
+                        pokemon = "egg"
                     else:
-                        pokemon = pokemon_info
+                        pokemon_info = _indices[data[sections[0] * 16] & 0xFFFF]
+                        if isinstance(pokemon_info, tuple):
+                            form = pokemon_info[1][
+                                (data[sections[1] * 16 + 12] & 0xFF) >> 3
+                            ]
+                            pokemon = pokemon_info[0]
+                            if form:
+                                pokemon += f"-{form}"
+                        else:
+                            pokemon = pokemon_info
                 box.append(pokemon)
             boxes.append(box)
 

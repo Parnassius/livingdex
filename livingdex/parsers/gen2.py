@@ -286,4 +286,5 @@ _indices = {
     0xF9: "lugia",
     0xFA: "ho-oh",
     0xFB: "celebi",
+    0xFD: "egg",
 }

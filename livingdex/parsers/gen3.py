@@ -39,21 +39,25 @@ def parse(save: Path, sub_parser: str) -> list[list[str]]:
                 else:
                     pid, tid, *data = struct.unpack("<LL24x12L", pokemon_data)
                     key = pid ^ tid
-                    section_id = _sections_positions[pid % 24][0]
-                    pokemon = _indices[(data[section_id * 3] ^ key) & 0xFFFF]
-                    if pokemon == "unown":
-                        letter = (
-                            (((pid >> 24) & 0x3) << 6)
-                            + (((pid >> 16) & 0x3) << 4)
-                            + (((pid >> 8) & 0x3) << 2)
-                            + (pid & 0x3)
-                        )
-                        letters = [
-                            *"abcdefghijklmnopqrstuvwxyz",
-                            "exclamation",
-                            "question",
-                        ]
-                        pokemon = f"unown-{letters[letter % 28]}"
+                    sections = _sections_positions[pid % 24]
+                    is_egg = ((data[sections[3] * 3 + 1] ^ key) >> 30) & 1
+                    if is_egg:
+                        pokemon = "egg"
+                    else:
+                        pokemon = _indices[(data[sections[0] * 3] ^ key) & 0xFFFF]
+                        if pokemon == "unown":
+                            letter = (
+                                (((pid >> 24) & 0x3) << 6)
+                                + (((pid >> 16) & 0x3) << 4)
+                                + (((pid >> 8) & 0x3) << 2)
+                                + (pid & 0x3)
+                            )
+                            letters = [
+                                *"abcdefghijklmnopqrstuvwxyz",
+                                "exclamation",
+                                "question",
+                            ]
+                            pokemon = f"unown-{letters[letter % 28]}"
                 box.append(pokemon)
             boxes.append(box)
 
