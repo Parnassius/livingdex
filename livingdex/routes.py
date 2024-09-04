@@ -38,5 +38,5 @@ async def game(request: web.Request) -> Mapping[str, Any]:
         "expected_data": all_games[game_id]["expected"],
         "game_data": game_data,
         "box_columns": 5 if all_games[game_id]["parser"] in ("gen1", "gen2") else 6,
-        "gb_gbc": all_games[game_id]["parser"] in ("gen1", "gen2"),
+        "gb_gbc": all_games[game_id]["parser"].partition("-")[0] in ("gen1", "gen2"),
     }
