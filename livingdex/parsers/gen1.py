@@ -8,9 +8,14 @@ def parse(save: Path, sub_parser: str) -> list[list[str]]:
 
     boxes = []
     with save.open("rb") as f:
+        f.seek(0x284C)
+        current_box = f.read(1)[0] & 0x7F
         for box_index in range(12):
-            ofs = 0x4000 if box_index < 6 else 0x6000
-            ofs += 0x462 * (box_index % 6)
+            if box_index == current_box:
+                ofs = 0x30C0
+            else:
+                ofs = 0x4000 if box_index < 6 else 0x6000
+                ofs += 0x462 * (box_index % 6)
             f.seek(ofs)
             pokemon_count = f.read(1)[0]
             boxes.append([_indices[i] for i in f.read(pokemon_count)])

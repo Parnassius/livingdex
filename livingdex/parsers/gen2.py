@@ -5,13 +5,21 @@ from pathlib import Path
 
 
 def parse(save: Path, sub_parser: str) -> list[list[str]]:
-    assert sub_parser == ""
+    current_box_offset, current_box_data_offset = {
+        "gold-silver": (0x2724, 0x2D6C),
+        "crystal": (0x2700, 0x2D10),
+    }[sub_parser]
 
     boxes = []
     with save.open("rb") as f:
+        f.seek(current_box_offset)
+        current_box = f.read(1)[0]
         for box_index in range(14):
-            ofs = 0x4000 if box_index < 7 else 0x6000
-            ofs += 0x450 * (box_index % 7)
+            if box_index == current_box:
+                ofs = current_box_data_offset
+            else:
+                ofs = 0x4000 if box_index < 7 else 0x6000
+                ofs += 0x450 * (box_index % 7)
             f.seek(ofs)
             pokemon_count = f.read(1)[0]
             box = []
