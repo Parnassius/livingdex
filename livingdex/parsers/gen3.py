@@ -13,9 +13,9 @@ def parse(save: Path, sub_parser: str) -> list[list[str]]:
         (slot1_counter,) = struct.unpack("<L", f.read(4))
         f.seek(0x01BFFC)
         (slot2_counter,) = struct.unpack("<L", f.read(4))
-        if 0xFFFF in (slot1_counter, slot2_counter):
-            slot1_counter = (slot1_counter + 1) & 0xFFFF
-            slot2_counter = (slot2_counter + 1) & 0xFFFF
+        if 0xFFFFFFFF in (slot1_counter, slot2_counter):
+            slot1_counter = (slot1_counter + 1) & 0xFFFFFFFF
+            slot2_counter = (slot2_counter + 1) & 0xFFFFFFFF
         base_ofs = 0x000000 if slot1_counter > slot2_counter else 0x00E000
 
         box_buffers = [b""] * 9
