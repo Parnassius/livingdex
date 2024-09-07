@@ -17,17 +17,18 @@ warn_unreachable = true
 
 
 [tool.poe.tasks]
-ruff-fix = "ruff check livingdex --fix-only --exit-zero"
-black = "black livingdex"
+ruff-fix = "ruff check livingdex tests --fix-only --exit-zero"
+black = "black livingdex tests"
 prettier = "npx --no prettier livingdex/templates --write"
 prettier-check = "npx --no prettier livingdex/templates --check"
 biome-fix = "npx --no @biomejs/biome check livingdex --write"
 format = ["ruff-fix", "black", "prettier", "biome-fix"]
 
-mypy = "mypy livingdex"
-ruff = "ruff check livingdex"
+mypy = "mypy livingdex tests"
+ruff = "ruff check livingdex tests"
 biome = "npx --no @biomejs/biome ci --error-on-warnings livingdex"
-all = ["format", "mypy", "ruff", "biome"]
+pytest = "pytest"
+all = ["format", "mypy", "ruff", "biome", "pytest"]
 
 
 [tool.poetry]
@@ -46,10 +47,16 @@ typenv = "0.2.0"
 black = "24.8.0"
 mypy = "1.11.2"
 poethepoet = "0.28.0"
+pytest = "8.3.2"
 ruff = "0.6.3"
 
 [tool.poetry.scripts]
 livingdex = "livingdex.__main__:main"
+
+
+[tool.pytest.ini_options]
+addopts = "--strict-config --strict-markers"
+xfail_strict = true
 
 
 [tool.ruff]
