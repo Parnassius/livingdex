@@ -36,6 +36,10 @@ from livingdex.parsers import parse
         ("gen4-heartgold-soulsilver", "heartgold-slot2.sav"),
         ("gen4-heartgold-soulsilver", "soulsilver-slot1.sav"),
         ("gen4-heartgold-soulsilver", "soulsilver-slot2.sav"),
+        ("gen5", "black.sav"),
+        ("gen5", "white.sav"),
+        ("gen5", "black2.sav"),
+        ("gen5", "white2.sav"),
     ],
 )
 def test_parsers(parser: str, save_file: str) -> None:
