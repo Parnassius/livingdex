@@ -90,8 +90,9 @@ main {
       border: solid;
       border-width: 0 4px 4px 0;
       > div {
+        height: 3em;
         text-align: center;
-        line-height: 3em;
+        align-content: center;
         background-color: var(--background-primary);
         &:nth-child(6n + 1) {
           border-left-width: 0;

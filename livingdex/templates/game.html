@@ -35,7 +35,7 @@
                 {{ pokemon }}
               </div>
               {% if loop.last %}
-                {% for _ in range(loop.index0 % box_columns + 1, box_columns) %}
+                {% for _ in range(loop.index, 20 if gb_gbc else 30) %}
                   <div class="filler"></div>
                 {% endfor %}
               {% endif %}

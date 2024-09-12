@@ -38,6 +38,5 @@ async def game(request: web.Request) -> Mapping[str, Any]:
         "all_games": {k: v["name"] for k, v in all_games.items()},
         "expected_data": all_games[game_id]["expected"],
         "game_data": game_data,
-        "box_columns": 5 if gb_gbc else 6,
         "gb_gbc": gb_gbc,
     }
