@@ -94,6 +94,7 @@ main {
         text-align: center;
         align-content: center;
         background-color: var(--background-primary);
+        line-height: 1;
         &:nth-child(6n + 1) {
           border-left-width: 0;
         }
@@ -102,6 +103,9 @@ main {
         }
         &.wrong {
           background-color: var(--background-wrong);
+        }
+        small {
+          font-size: 0.8em;
         }
       }
     }

@@ -27,12 +27,22 @@
           <div class="box-label">{{ loop.index }}</div>
           <div class="box-content">
             {% for pokemon in box_data %}
-              <div
-                {% if game_data[box_id][loop.index0] %}
-                  class="{% if pokemon == game_data[box_id][loop.index0] %}caught{% else %}wrong{% endif %}"
+              {% set box_class = None %}
+              {% set wrong_pokemon = None %}
+              {% if game_data[box_id][loop.index0] %}
+                {% if pokemon == game_data[box_id][loop.index0] %}
+                  {% set box_class = "caught" %}
+                {% else %}
+                  {% set box_class = "wrong" %}
+                  {% set wrong_pokemon = game_data[box_id][loop.index0] %}
                 {% endif %}
-              >
+              {% endif %}
+              <div {% if box_class %}class="{{ box_class }}"{% endif %}>
                 {{ pokemon }}
+                {% if wrong_pokemon %}
+                  <br />
+                  <small>{{ wrong_pokemon }}</small>
+                {% endif %}
               </div>
               {% if loop.last %}
                 {% for _ in range(loop.index, 20 if gb_gbc else 30) %}
