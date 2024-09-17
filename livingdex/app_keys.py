@@ -1,17 +1,10 @@
 from __future__ import annotations
 
-from pathlib import Path
-from typing import TypedDict
+import asyncio
 
 from aiohttp import web
 
+from livingdex.game_data import GameData
 
-class GameData(TypedDict):
-    name: str
-    save: str
-    parser: str
-    expected: list[list[str]]
-
-
-data_path = web.AppKey("data_path", Path)
 games = web.AppKey("games", dict[str, GameData])
+watches_task = web.AppKey("watches_task", asyncio.Task[None])

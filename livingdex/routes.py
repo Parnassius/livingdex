@@ -6,7 +6,7 @@ from typing import Any
 import aiohttp_jinja2
 from aiohttp import web
 
-from livingdex import app_keys, parsers
+from livingdex import app_keys
 
 routes = web.RouteTableDef()
 
@@ -26,17 +26,13 @@ async def game(request: web.Request) -> Mapping[str, Any]:
     if game_id not in all_games:
         raise web.HTTPNotFound
 
-    game_data = parsers.parse(
-        all_games[game_id]["parser"],
-        request.app[app_keys.data_path] / all_games[game_id]["save"],
-    )
-    gb_gbc = all_games[game_id]["parser"].partition("-")[0] in ("gen1", "gen2")
+    game = all_games[game_id]
 
     return {
-        "current_game": all_games[game_id]["name"],
+        "current_game": game.name,
         "current_game_id": game_id,
-        "all_games": {k: v["name"] for k, v in all_games.items()},
-        "expected_data": all_games[game_id]["expected"],
-        "game_data": game_data,
-        "gb_gbc": gb_gbc,
+        "all_games": {k: v.name for k, v in all_games.items()},
+        "expected_data": game.expected,
+        "game_data": game.data,
+        "gb_gbc": game.gb_gbc,
     }
