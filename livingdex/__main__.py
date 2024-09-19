@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import tomllib
+import weakref
 from functools import partial
 from pathlib import Path
 
@@ -13,21 +14,23 @@ from typenv import Env
 
 from livingdex import app_keys
 from livingdex.game_data import GameData
-from livingdex.routes import routes
+from livingdex.routes import routes, send_sse_updates
 
 
 async def setup_file_watches(app: web.Application, *, data_path: Path) -> None:
     async def _setup_file_watches() -> None:
         async for changes in watchfiles.awatch(data_path):
             changed_files = {x[1] for x in changes}
-            for game in app[app_keys.games].values():
-                for file in changed_files:
-                    try:
-                        if game.save_path.samefile(file):
-                            game.load_data()
-                            break
-                    except OSError:
-                        pass
+            async with asyncio.TaskGroup() as tg:
+                for game in app[app_keys.games].values():
+                    for file in changed_files:
+                        try:
+                            if game.save_path.samefile(file):
+                                game.load_data()
+                                tg.create_task(send_sse_updates(app, game))
+                                break
+                        except OSError:
+                            pass
 
     app[app_keys.watches_task] = asyncio.create_task(_setup_file_watches())
 
@@ -37,11 +40,21 @@ async def add_headers(
 ) -> None:
     response.headers["Content-Security-Policy"] = (
         "default-src 'none'; "
+        "connect-src 'self'; "
         "img-src 'self'; "
+        "script-src 'self'; "
         "style-src 'self'; "
         "base-uri 'none'; "
         "form-action 'none'; "
     )
+
+
+async def close_sse_streams(app: web.Application) -> None:
+    async with asyncio.TaskGroup() as tg:
+        streams = app[app_keys.sse_streams].keys()
+        for stream in set(streams):
+            stream.stop_streaming()
+            tg.create_task(stream.wait())
 
 
 def main() -> None:
@@ -63,12 +76,16 @@ def main() -> None:
 
     with (data_path / "games.toml").open("rb") as f:
         app[app_keys.games] = {
-            k: GameData(**v, base_path=data_path) for k, v in tomllib.load(f).items()
+            k: GameData(game_id=k, **v, base_path=data_path)
+            for k, v in tomllib.load(f).items()
         }
 
     app.on_startup.append(partial(setup_file_watches, data_path=data_path))
 
     app.on_response_prepare.append(add_headers)
+
+    app[app_keys.sse_streams] = weakref.WeakKeyDictionary()
+    app.on_shutdown.append(close_sse_streams)
 
     web.run_app(app, port=port)
 

@@ -93,9 +93,12 @@ main {
       border: solid;
       border-width: 0 4px 4px 0;
       > div {
+        display: flex;
+        flex-direction: column;
+        gap: 0.15em;
         height: 3em;
         text-align: center;
-        align-content: center;
+        justify-content: center;
         background-color: var(--background-primary);
         line-height: 1;
         &:nth-child(6n + 1) {
@@ -106,9 +109,10 @@ main {
         }
         &.wrong {
           background-color: var(--background-wrong);
-        }
-        small {
-          font-size: 0.8em;
+          &::after {
+            content: attr(data-wrong-pokemon);
+            font-size: 0.8em;
+          }
         }
       }
     }

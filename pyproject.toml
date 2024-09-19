@@ -41,6 +41,7 @@ authors = ["Parnassius <Parnassius@users.noreply.github.com>"]
 python = "^3.12"
 aiohttp = "3.10.5"
 aiohttp-jinja2 = "1.6"
+aiohttp-sse = "2.2.0"
 typenv = "0.2.0"
 watchfiles = "0.24.0"
 

@@ -4,12 +4,16 @@
     <meta name="viewport" content="width=device-width" />
     <title>Living Dex - {{ current_game }}</title>
     <link rel="stylesheet" href="{{ static("main.css") }}" />
+    <script
+      type="module"
+      src="{{ static("main.js") }}#{{ timestamp }}"
+    ></script>
   </head>
   <body>
     <header>
       <menu>
         {% for game_id, game in all_games.items() %}
-          <li>
+          <li id="game-{{ game_id }}">
             <a
               href="{{ url("game", game_id=game_id) }}"
               {% if game_id == current_game_id %}class="active"{% endif %}
@@ -38,12 +42,11 @@
                   {% set wrong_pokemon = game_data[box_id][loop.index0] %}
                 {% endif %}
               {% endif %}
-              <div {% if box_class %}class="{{ box_class }}"{% endif %}>
+              <div
+                {% if box_class %}class="{{ box_class }}"{% endif %}
+                {% if wrong_pokemon %}data-wrong-pokemon="{{ wrong_pokemon }}"{% endif %}
+              >
                 {{ pokemon }}
-                {% if wrong_pokemon %}
-                  <br />
-                  <small>{{ wrong_pokemon }}</small>
-                {% endif %}
               </div>
               {% if loop.last %}
                 {% for _ in range(loop.index, 20 if gb_gbc else 30) %}
