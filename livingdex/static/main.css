@@ -49,6 +49,9 @@ header {
           color: var(--text-color-negative);
           background-color: var(--text-color);
         }
+        small {
+          font-size: 0.8em;
+        }
       }
     }
   }

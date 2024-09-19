@@ -8,13 +8,14 @@
   <body>
     <header>
       <menu>
-        {% for game_id, game_name in all_games.items() %}
+        {% for game_id, game in all_games.items() %}
           <li>
             <a
               href="{{ url("game", game_id=game_id) }}"
               {% if game_id == current_game_id %}class="active"{% endif %}
             >
-              {{ game_name }}
+              {{ game.name }}
+              <small>({{ game.caught }} / {{ game.total }})</small>
             </a>
           </li>
         {% endfor %}

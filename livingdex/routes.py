@@ -31,7 +31,7 @@ async def game(request: web.Request) -> Mapping[str, Any]:
     return {
         "current_game": game.name,
         "current_game_id": game_id,
-        "all_games": {k: v.name for k, v in all_games.items()},
+        "all_games": all_games,
         "expected_data": game.expected,
         "game_data": game.data,
         "gb_gbc": game.gb_gbc,

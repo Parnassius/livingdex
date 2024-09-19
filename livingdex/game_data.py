@@ -25,6 +25,21 @@ class GameData:
         return self.parser.partition("-")[0] in ("gen1", "gen2")
 
     @property
+    def caught(self) -> int:
+        return sum(
+            1
+            for box_id, box in enumerate(self.expected)
+            for pokemon_id, pokemon in enumerate(box)
+            if len(self.data) > box_id
+            and len(self.data[box_id]) > pokemon_id
+            and pokemon == self.data[box_id][pokemon_id]
+        )
+
+    @property
+    def total(self) -> int:
+        return sum(len(x) for x in self.expected)
+
+    @property
     def data(self) -> list[list[str]]:
         if self._data is None:
             self.load_data()
