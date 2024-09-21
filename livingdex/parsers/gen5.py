@@ -19,12 +19,7 @@ def parse(save: Path, sub_parser: str) -> list[list[str]]:
                     key = (0x41C64E6D * key) + 0x00006073
                     data[i] = data[i] ^ ((key >> 16) & 0xFFFF)
 
-                if (
-                    pid == 0
-                    and flags == 0
-                    and checksum == 0
-                    and all(x == 0 for x in data)
-                ):
+                if pid == 0 and flags == 0:
                     pokemon = ""
                 else:
                     sections = _sections_positions[((pid >> 13) & 0x1F) % 24]
