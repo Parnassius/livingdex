@@ -16,13 +16,22 @@ class GameData:
     name: str
     base_path: InitVar[Path]
     save: InitVar[str]
+    other_saves: InitVar[list[str] | None] = None
     save_path: Path = field(init=False)
+    other_saves_paths: list[Path] = field(init=False)
     expected: list[list[str]]
     _data: list[list[str]] | None = None
+    _other_saves_data: dict[str, str] | None = None
     _timestamp: int | None = None
 
-    def __post_init__(self, base_path: Path, save: str) -> None:
+    def __post_init__(
+        self, base_path: Path, save: str, other_saves: list[str] | None = None
+    ) -> None:
         self.save_path = base_path / save
+        if other_saves is None:
+            self.other_saves_paths = []
+        else:
+            self.other_saves_paths = [base_path / x for x in other_saves]
 
     @functools.cached_property
     def gb_gbc(self) -> bool:
@@ -58,6 +67,8 @@ class GameData:
                         box_data.append("caught")
                     else:
                         box_data.append(f"wrong|{self.data[box_id][pokemon_id]}")
+                elif pokemon in self.other_saves_data:
+                    box_data.append(f"other-game|{self.other_saves_data[pokemon]}")
                 else:
                     box_data.append("missing")
             data.append(box_data)
@@ -72,6 +83,13 @@ class GameData:
         return self._data
 
     @property
+    def other_saves_data(self) -> dict[str, str]:
+        if self._other_saves_data is None:
+            self.load_data()
+            self._other_saves_data = cast(dict[str, str], self._other_saves_data)
+        return self._other_saves_data
+
+    @property
     def timestamp(self) -> int:
         if self._timestamp is None:
             self.load_data()
@@ -80,6 +98,14 @@ class GameData:
 
     def load_data(self) -> None:
         self._data = parsers.parse(self.save_path)
+        self._other_saves_data = {
+            x: save.stem
+            for save in self.other_saves_paths
+            for box in parsers.parse(save)
+            for x in box
+            if x != ""
+        }
+
         if hasattr(self, "gb_gbc"):
             del self.gb_gbc
         if hasattr(self, "caught"):

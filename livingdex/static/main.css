@@ -5,6 +5,7 @@
   --background-primary: light-dark(#fff, #222);
 
   --background-caught: light-dark(#bda, #251);
+  --background-other-game: light-dark(#ed9, #651);
   --background-wrong: light-dark(#eaa, #611);
 
   font-size: 16px;
@@ -78,10 +79,18 @@ main {
       font-size: 3em;
       text-align: center;
       align-content: center;
-      &:not(:has(~ .box-content > div:not(:is(.caught, .filler)))) {
+      &:not(
+          :has(
+              ~ .box-content
+                > div:not(:is([data-slot-status="caught"], [data-slot-status="filler"]))
+            )
+        ) {
         background-color: var(--background-caught);
       }
-      &:has(~ .box-content > div.wrong) {
+      &:has(~ .box-content > div[data-slot-status="other-game"]) {
+        background-color: var(--background-other-game);
+      }
+      &:has(~ .box-content > div[data-slot-status="wrong"]) {
         background-color: var(--background-wrong);
       }
     }
@@ -104,15 +113,18 @@ main {
         &:nth-child(6n + 1) {
           border-left-width: 0;
         }
-        &.caught {
+        &[data-slot-status="caught"] {
           background-color: var(--background-caught);
         }
-        &.wrong {
+        &[data-slot-status="other-game"] {
+          background-color: var(--background-other-game);
+        }
+        &[data-slot-status="wrong"] {
           background-color: var(--background-wrong);
-          &::after {
-            content: attr(data-wrong-pokemon);
-            font-size: 0.8em;
-          }
+        }
+        &[data-small-text]::after {
+          content: attr(data-small-text);
+          font-size: 0.8em;
         }
       }
     }

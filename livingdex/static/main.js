@@ -13,18 +13,12 @@ function onSseBoxes(event) {
     const slotElements = boxElements[boxId].querySelectorAll(".box-content > div");
     for (const [slotId, slot] of box.entries()) {
       const el = slotElements[slotId];
-      if (slot === "caught") {
-        el.classList.remove("wrong");
-        el.classList.add("caught");
-        delete el.dataset.wrongPokemon;
-      } else if (slot.startsWith("wrong|")) {
-        el.classList.remove("caught");
-        el.classList.add("wrong");
-        el.dataset.wrongPokemon = slot.split("|")[1];
-      } else if (slot === "missing") {
-        el.classList.remove("caught");
-        el.classList.remove("wrong");
-        delete el.dataset.wrongPokemon;
+      const [status, text] = slot.split("|");
+      el.dataset.slotStatus = status;
+      if (text) {
+        el.dataset.smallText = text;
+      } else {
+        delete el.dataset.smallText;
       }
     }
   }

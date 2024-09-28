@@ -25,7 +25,10 @@ async def setup_file_watches(app: web.Application, *, data_path: Path) -> None:
                 for game in app[app_keys.games].values():
                     for file in changed_files:
                         try:
-                            if game.save_path.samefile(file):
+                            if any(
+                                x.samefile(file)
+                                for x in (game.save_path, *game.other_saves_paths)
+                            ):
                                 game.load_data()
                                 tg.create_task(send_sse_updates(app, game))
                                 break
