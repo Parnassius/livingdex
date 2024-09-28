@@ -1,13 +1,25 @@
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 
-def parse(save: Path, sub_parser: str) -> list[list[str]]:
-    assert sub_parser == ""
+def parse(save: Path) -> list[list[str]] | None:
+    size = save.stat().st_size
+    if size < 0x8000 or size > 0x8030:
+        return None
 
     boxes = []
     with save.open("rb") as f:
+        # Check if the current box is a valid pokemon list
+        f.seek(0x30C0)
+        pokemon_count = f.read(1)[0]
+        if pokemon_count > 20:
+            return None
+        f.seek(pokemon_count, os.SEEK_CUR)
+        if f.read(1) != b"\xff":
+            return None
+
         f.seek(0x284C)
         current_box = f.read(1)[0] & 0x7F
         for box_index in range(12):

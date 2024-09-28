@@ -1,14 +1,31 @@
 from __future__ import annotations
 
+import binascii
+import os
 import struct
 from pathlib import Path
 
 
-def parse(save: Path, sub_parser: str) -> list[list[str]]:
-    assert sub_parser == ""
+def parse(save: Path) -> list[list[str]] | None:
+    if save.stat().st_size != 0x80000:
+        return None
 
     boxes = []
     with save.open("rb") as f:
+        # Detect the game based on the footer checksum
+        for main_size, info_size in [
+            (0x24000, 0x8C),  # Black/White
+            (0x26000, 0x94),  # Black2/White2
+        ]:
+            f.seek(main_size - 0x100)
+            checksum = binascii.crc_hqx(f.read(info_size), 0xFFFF)
+
+            f.seek(0xE, os.SEEK_CUR)
+            if checksum == struct.unpack("<H", f.read(2))[0]:
+                break
+        else:
+            return None
+
         for box_index in range(24):
             f.seek(0x400 + box_index * 0x1000)
             box = []

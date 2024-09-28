@@ -4,8 +4,10 @@ import struct
 from pathlib import Path
 
 
-def parse(save: Path, sub_parser: str) -> list[list[str]]:
-    assert sub_parser == ""
+def parse(save: Path) -> list[list[str]] | None:
+    size = save.stat().st_size
+    if size < 0x20000 or size > 0x20030:
+        return None
 
     boxes = []
     with save.open("rb") as f:

@@ -4,15 +4,25 @@ import struct
 from pathlib import Path
 
 
-def parse(save: Path, sub_parser: str) -> list[list[str]]:
-    storage_start, storage_size = {
-        "diamond-pearl": (0xC100, 0x121E0),
-        "platinum": (0xCF2C, 0x121E4),
-        "heartgold-soulsilver": (0xF700, 0x12310),
-    }[sub_parser]
+def parse(save: Path) -> list[list[str]] | None:
+    if save.stat().st_size != 0x80000:
+        return None
 
     boxes = []
     with save.open("rb") as f:
+        # Detect the game based on the footer of the general section
+        for general_size, storage_start, storage_size, is_dpp in [  # noqa: B007
+            (0xC100, 0xC100, 0x121E0, True),  # Diamond/Pearl
+            (0xCF2C, 0xCF2C, 0x121E4, True),  # Platinum
+            (0xF628, 0xF700, 0x12310, False),  # HeartGold/SoulSilver
+        ]:
+            f.seek(0x40000 + general_size - 0xC)
+            block_size, magic = struct.unpack("<LL", f.read(8))
+            if block_size == general_size and magic == 0x20060623:
+                break
+        else:
+            return None
+
         f.seek(storage_start + storage_size - 0x14)
         (slot1_counter1, slot1_counter2) = struct.unpack("<LL", f.read(8))
         f.seek(0x40000 + storage_start + storage_size - 0x14)
@@ -29,7 +39,7 @@ def parse(save: Path, sub_parser: str) -> list[list[str]]:
 
         for box_index in range(18):
             ofs = base_ofs
-            if sub_parser in ("diamond-pearl", "platinum"):
+            if is_dpp:
                 ofs += 4 + box_index * 0xFF0
             else:
                 ofs += box_index * 0x1000

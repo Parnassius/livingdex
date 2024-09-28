@@ -5,15 +5,17 @@ from pathlib import Path
 from livingdex.parsers import gen1, gen2, gen3, gen4, gen5
 
 
-def parse(parser: str, save: Path) -> list[list[str]]:
-    parser, _, sub_parser = parser.partition("-")
-    return _parsers[parser](save, sub_parser)
+def parse(save: Path) -> list[list[str]]:
+    parsers = [
+        gen1.parse,
+        gen2.parse,
+        gen3.parse,
+        gen4.parse,
+        gen5.parse,
+    ]
 
+    for parser in parsers:
+        if (data := parser(save)) is not None:
+            return data
 
-_parsers = {
-    "gen1": gen1.parse,
-    "gen2": gen2.parse,
-    "gen3": gen3.parse,
-    "gen4": gen4.parse,
-    "gen5": gen5.parse,
-}
+    raise NotImplementedError

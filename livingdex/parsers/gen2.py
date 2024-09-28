@@ -1,17 +1,31 @@
 from __future__ import annotations
 
+import os
 import struct
 from pathlib import Path
 
 
-def parse(save: Path, sub_parser: str) -> list[list[str]]:
-    current_box_offset, current_box_data_offset = {
-        "gold-silver": (0x2724, 0x2D6C),
-        "crystal": (0x2700, 0x2D10),
-    }[sub_parser]
+def parse(save: Path) -> list[list[str]] | None:
+    size = save.stat().st_size
+    if size < 0x8000 or size > 0x8030:
+        return None
 
     boxes = []
     with save.open("rb") as f:
+        # Detect the game based on the current box location
+        for current_box_offset, current_box_data_offset in [  # noqa: B007
+            (0x2724, 0x2D6C),  # Gold/Silver
+            (0x2700, 0x2D10),  # Crystal
+        ]:
+            f.seek(current_box_data_offset)
+            pokemon_count = f.read(1)[0]
+            if pokemon_count <= 20:
+                f.seek(pokemon_count, os.SEEK_CUR)
+                if f.read(1) == b"\xff":
+                    break
+        else:
+            return None
+
         f.seek(current_box_offset)
         current_box = f.read(1)[0]
         for box_index in range(14):

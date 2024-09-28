@@ -17,7 +17,6 @@ class GameData:
     base_path: InitVar[Path]
     save: InitVar[str]
     save_path: Path = field(init=False)
-    parser: str
     expected: list[list[str]]
     _data: list[list[str]] | None = None
     _timestamp: int | None = None
@@ -27,7 +26,7 @@ class GameData:
 
     @functools.cached_property
     def gb_gbc(self) -> bool:
-        return self.parser.partition("-")[0] in ("gen1", "gen2")
+        return len(self.data[0]) < 30
 
     @functools.cached_property
     def caught(self) -> int:
@@ -80,7 +79,9 @@ class GameData:
         return self._timestamp
 
     def load_data(self) -> None:
-        self._data = parsers.parse(self.parser, self.save_path)
+        self._data = parsers.parse(self.save_path)
+        if hasattr(self, "gb_gbc"):
+            del self.gb_gbc
         if hasattr(self, "caught"):
             del self.caught
         if hasattr(self, "total"):
