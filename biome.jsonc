@@ -5,12 +5,7 @@
     },
   },
   "formatter": {
-    "indentStyle": "space",
+    "useEditorconfig": true,
     "lineWidth": 88,  // Black's default
-  },
-  "css": {
-    "formatter": {
-      "enabled": true,
-    },
   },
 }
