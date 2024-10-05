@@ -1,9 +1,4 @@
 {
-  "linter": {
-    "rules": {
-      "all": true,
-    },
-  },
   "formatter": {
     "useEditorconfig": true,
     "lineWidth": 88,  // Black's default
