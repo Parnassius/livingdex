@@ -93,6 +93,18 @@ main {
       &:has(~ .box-content > div[data-slot-status="wrong"]) {
         background-color: var(--background-wrong);
       }
+      &:is(
+          &:has(~ .box-content > div[data-slot-status="wrong-and-other-game"]),
+          &:has(~ .box-content > div[data-slot-status="other-game"]):has(
+              ~ .box-content > div[data-slot-status="wrong"]
+            )
+        ) {
+        background-image: linear-gradient(
+          to right bottom,
+          var(--background-other-game) calc(50% - 1px),
+          var(--background-wrong) calc(50% + 1px)
+        );
+      }
     }
     .box-content {
       display: grid;
@@ -121,6 +133,13 @@ main {
         }
         &[data-slot-status="wrong"] {
           background-color: var(--background-wrong);
+        }
+        &[data-slot-status="wrong-and-other-game"] {
+          background-image: linear-gradient(
+            to right bottom,
+            var(--background-other-game) calc(50% - 1px),
+            var(--background-wrong) calc(50% + 1px)
+          );
         }
         &[data-small-text]::after {
           content: attr(data-small-text);

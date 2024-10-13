@@ -58,15 +58,21 @@ class GameData:
         for box_id, box in enumerate(self.expected):
             box_data = []
             for pokemon_id, pokemon in enumerate(box):
+                data_pokemon = self.data[box_id][pokemon_id]
                 if (
                     len(self.data) > box_id
                     and len(self.data[box_id]) > pokemon_id
-                    and self.data[box_id][pokemon_id] != ""
+                    and data_pokemon != ""
                 ):
-                    if pokemon == self.data[box_id][pokemon_id]:
+                    if pokemon == data_pokemon:
                         box_data.append("caught")
+                    elif pokemon in self.other_saves_data:
+                        box_data.append(
+                            "wrong-and-other-game|"
+                            f"{data_pokemon} / {self.other_saves_data[pokemon]}"
+                        )
                     else:
-                        box_data.append(f"wrong|{self.data[box_id][pokemon_id]}")
+                        box_data.append(f"wrong|{data_pokemon}")
                 elif pokemon in self.other_saves_data:
                     box_data.append(f"other-game|{self.other_saves_data[pokemon]}")
                 else:

@@ -37,6 +37,9 @@
               {% if game_data[box_id][loop.index0] %}
                 {% if pokemon == game_data[box_id][loop.index0] %}
                   {% set slot_status = "caught" %}
+                {% elif pokemon in other_saves_data %}
+                  {% set slot_status = "wrong-and-other-game" %}
+                  {% set small_text = game_data[box_id][loop.index0] ~ " / " ~ other_saves_data[pokemon] %}
                 {% else %}
                   {% set slot_status = "wrong" %}
                   {% set small_text = game_data[box_id][loop.index0] %}
