@@ -16,8 +16,8 @@ routes = web.RouteTableDef()
 
 @routes.get("/")
 async def index(request: web.Request) -> web.StreamResponse:
-    first_game_id = next(iter(request.app[app_keys.games].keys()))
-    loc = request.app.router["game"].url_for(game_id=first_game_id)
+    last_game_id = next(reversed(request.app[app_keys.games].keys()))
+    loc = request.app.router["game"].url_for(game_id=last_game_id)
     raise web.HTTPFound(loc)
 
 
