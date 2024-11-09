@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from livingdex.parsers import gen1, gen2, gen3, gen4, gen5
+from livingdex.parsers import gen1, gen2, gen3, gen4, gen5, gen6
 
 
 def parse(save: Path) -> list[list[str]]:
@@ -12,6 +12,7 @@ def parse(save: Path) -> list[list[str]]:
         gen3.parse,
         gen4.parse,
         gen5.parse,
+        gen6.parse,
     ]
 
     for parser in parsers:

@@ -40,6 +40,10 @@ from livingdex import parsers
         ("white.sav"),
         ("black2.sav"),
         ("white2.sav"),
+        ("x.sav"),
+        ("y.sav"),
+        ("omegaruby.sav"),
+        ("alphasapphire.sav"),
     ],
 )
 def test_parsers(save_file: str) -> None:
