@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from livingdex import parsers
+from livingdex.pkhex import PKHeXWrapper
 
 
 @pytest.mark.parametrize(
@@ -50,4 +50,5 @@ def test_parsers(save_file: str) -> None:
     save = Path(__file__).parent / "saves" / save_file
     with save.with_suffix(".expected").open("r", encoding="utf-8") as f:
         expected = [x.split(",") if x else [] for x in f.read().split("\n")]
-    assert parsers.parse(save) == expected
+    data = [[str(x) for x in box] for box in PKHeXWrapper(save).box_data]
+    assert data == expected

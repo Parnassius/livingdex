@@ -4,7 +4,7 @@ build-backend = "poetry.core.masonry.api"
 
 
 [tool.mypy]
-python_version = "3.13"
+python_version = "3.12"
 strict = true
 
 # Disallow dynamic typing
@@ -14,6 +14,11 @@ disallow_any_decorated = true
 #disallow_any_explicit = true
 
 warn_unreachable = true
+
+[[tool.mypy.overrides]]
+module = "livingdex.pkhex.*"
+disallow_any_unimported = false
+warn_return_any = false
 
 
 [tool.poe.tasks]
@@ -30,6 +35,12 @@ biome = "npx --no @biomejs/biome ci --error-on-warnings livingdex"
 pytest = "pytest"
 all = ["format", "mypy", "ruff", "biome", "pytest"]
 
+pkhex.shell = """
+    rm -rf nuget PKHeX.Core.dll
+    dotnet restore --packages nuget
+    cp nuget/pkhex.core/*/lib/net*/PKHeX.Core.dll .
+"""
+
 
 [tool.poetry]
 name = "livingdex"
@@ -38,10 +49,11 @@ description = ""
 authors = ["Parnassius <Parnassius@users.noreply.github.com>"]
 
 [tool.poetry.dependencies]
-python = "^3.13"
+python = ">=3.12,<3.13"
 aiohttp = "3.10.10"
 aiohttp-jinja2 = "1.6"
 aiohttp-sse = "2.2.0"
+pythonnet = "3.0.4"
 typenv = "0.2.0"
 watchfiles = "0.24.0"
 
@@ -62,7 +74,7 @@ xfail_strict = true
 
 
 [tool.ruff]
-target-version = "py313"
+target-version = "py312"
 
 [tool.ruff.lint]
 select = [

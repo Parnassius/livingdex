@@ -1,14 +1,17 @@
-FROM python:3.13-alpine as base
+FROM python:3.12-alpine3.20 as base
 
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV DATA_PATH=/data
 WORKDIR /app
 
+RUN apk add --no-cache dotnet8-runtime
+
 
 FROM base as builder
 
 RUN apk add --no-cache gcc musl-dev libffi-dev
+RUN apk add --no-cache dotnet8-sdk
 
 RUN python -m venv /opt/poetry-venv
 RUN /opt/poetry-venv/bin/pip install --upgrade pip setuptools
@@ -22,6 +25,9 @@ RUN /opt/poetry-venv/bin/poetry install --no-interaction --only main --no-root
 COPY . .
 RUN /opt/poetry-venv/bin/poetry build --no-interaction --format wheel
 RUN .venv/bin/pip install --no-deps ./dist/*.whl
+
+RUN dotnet restore --packages nuget
+RUN cp nuget/pkhex.core/*/lib/net*/PKHeX.Core.dll .venv/lib/python*/site-packages
 
 
 FROM builder as test

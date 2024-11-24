@@ -6,7 +6,7 @@ import time
 from dataclasses import InitVar, dataclass, field
 from pathlib import Path
 
-from livingdex import parsers
+from livingdex.pkhex import PKM, PKHeXWrapper
 
 
 @dataclass(kw_only=True)
@@ -18,9 +18,10 @@ class GameData:
     other_saves: InitVar[list[str] | None] = None
     save_path: Path = field(init=False)
     other_saves_paths: list[Path] = field(init=False)
-    expected: list[list[str]]
-    data: list[list[str]] = field(init=False)
-    other_saves_data: dict[str, str] = field(init=False)
+    gb_gbc: bool = field(init=False)
+    expected: list[list[PKM]] = field(init=False)
+    data: list[list[PKM]] = field(init=False)
+    other_saves_data: dict[PKM, str] = field(init=False)
     timestamp: int = field(init=False)
 
     def __post_init__(
@@ -32,10 +33,6 @@ class GameData:
         else:
             self.other_saves_paths = [base_path / x for x in other_saves]
         self.load_data()
-
-    @functools.cached_property
-    def gb_gbc(self) -> bool:
-        return len(self.data[0]) < 30
 
     @functools.cached_property
     def caught(self) -> int:
@@ -62,7 +59,7 @@ class GameData:
                 if (
                     len(self.data) > box_id
                     and len(self.data[box_id]) > pokemon_id
-                    and data_pokemon != ""
+                    and data_pokemon
                 ):
                     if pokemon == data_pokemon:
                         box_data.append("caught")
@@ -82,13 +79,19 @@ class GameData:
         return json.dumps(data)
 
     def load_data(self) -> None:
-        self.data = parsers.parse(self.save_path)
+        save = PKHeXWrapper(self.save_path)
+
+        self.gb_gbc = save.box_slot_count == 20
+
+        self.expected = save.boxable_forms
+
+        self.data = save.box_data
         self.other_saves_data = {
             x: save.stem
             for save in self.other_saves_paths
-            for box in parsers.parse(save)
+            for box in PKHeXWrapper(save).box_data
             for x in box
-            if x != ""
+            if x
         }
 
         for attr in dir(self):
