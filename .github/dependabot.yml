@@ -25,3 +25,13 @@ updates:
       all-dependencies:
         patterns:
           - "*"
+  - package-ecosystem: nuget
+    directory: "/"
+    schedule:
+      interval: monthly
+    allow:
+      - dependency-type: all
+    groups:
+      all-dependencies:
+        patterns:
+          - "*"

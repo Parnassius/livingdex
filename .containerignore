@@ -2,3 +2,6 @@
 !.editorconfig
 **/__pycache__
 node_modules
+nuget
+obj
+PKHeX.Core.dll
