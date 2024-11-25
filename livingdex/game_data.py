@@ -5,7 +5,6 @@ import json
 import time
 from dataclasses import InitVar, dataclass, field
 from pathlib import Path
-from typing import cast
 
 from livingdex import parsers
 
@@ -20,9 +19,9 @@ class GameData:
     save_path: Path = field(init=False)
     other_saves_paths: list[Path] = field(init=False)
     expected: list[list[str]]
-    _data: list[list[str]] | None = None
-    _other_saves_data: dict[str, str] | None = None
-    _timestamp: int | None = None
+    data: list[list[str]] = field(init=False)
+    other_saves_data: dict[str, str] = field(init=False)
+    timestamp: int = field(init=False)
 
     def __post_init__(
         self, base_path: Path, save: str, other_saves: list[str] | None = None
@@ -32,6 +31,7 @@ class GameData:
             self.other_saves_paths = []
         else:
             self.other_saves_paths = [base_path / x for x in other_saves]
+        self.load_data()
 
     @functools.cached_property
     def gb_gbc(self) -> bool:
@@ -81,30 +81,9 @@ class GameData:
 
         return json.dumps(data)
 
-    @property
-    def data(self) -> list[list[str]]:
-        if self._data is None:
-            self.load_data()
-            self._data = cast(list[list[str]], self._data)
-        return self._data
-
-    @property
-    def other_saves_data(self) -> dict[str, str]:
-        if self._other_saves_data is None:
-            self.load_data()
-            self._other_saves_data = cast(dict[str, str], self._other_saves_data)
-        return self._other_saves_data
-
-    @property
-    def timestamp(self) -> int:
-        if self._timestamp is None:
-            self.load_data()
-            self._timestamp = cast(int, self._timestamp)
-        return self._timestamp
-
     def load_data(self) -> None:
-        self._data = parsers.parse(self.save_path)
-        self._other_saves_data = {
+        self.data = parsers.parse(self.save_path)
+        self.other_saves_data = {
             x: save.stem
             for save in self.other_saves_paths
             for box in parsers.parse(save)
@@ -112,12 +91,11 @@ class GameData:
             if x != ""
         }
 
-        if hasattr(self, "gb_gbc"):
-            del self.gb_gbc
-        if hasattr(self, "caught"):
-            del self.caught
-        if hasattr(self, "total"):
-            del self.total
-        if hasattr(self, "json_data"):
-            del self.json_data
-        self._timestamp = int(time.time())
+        for attr in dir(self):
+            if isinstance(getattr(type(self), attr, None), functools.cached_property):
+                try:
+                    delattr(self, attr)
+                except AttributeError:
+                    pass
+
+        self.timestamp = int(time.time())
