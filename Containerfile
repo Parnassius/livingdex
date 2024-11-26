@@ -1,16 +1,16 @@
-FROM python:3.12-alpine as base
+FROM python:3.12-alpine3.19 as base
 
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV DATA_PATH=/data
 WORKDIR /app
 
-RUN apk add --no-cache dotnet8-runtime
+RUN apk add --no-cache dotnet7-runtime
 
 
 FROM base as builder
 
-RUN apk add --no-cache gcc musl-dev libffi-dev dotnet8-sdk
+RUN apk add --no-cache gcc musl-dev libffi-dev dotnet7-sdk
 
 RUN python -m venv /opt/poetry-venv
 RUN /opt/poetry-venv/bin/pip install --upgrade pip setuptools
