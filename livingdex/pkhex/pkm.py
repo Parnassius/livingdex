@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from collections.abc import Sequence
 
 from livingdex.pkhex.core import PKHeX
