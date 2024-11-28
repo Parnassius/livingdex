@@ -50,7 +50,7 @@ authors = ["Parnassius <Parnassius@users.noreply.github.com>"]
 
 [tool.poetry.dependencies]
 python = ">=3.12,<3.13"
-aiohttp = "3.10.10"
+aiohttp = "3.10.11"
 aiohttp-jinja2 = "1.6"
 aiohttp-sse = "2.2.0"
 pythonnet = "3.0.4"
