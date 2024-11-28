@@ -22,12 +22,12 @@ warn_return_any = false
 
 
 [tool.poe.tasks]
-ruff-fix = "ruff check livingdex tests --fix-only --exit-zero"
-black = "black livingdex tests"
+ruff-fix = "ruff check livingdex tests --fix-only"
+ruff-format = "ruff format livingdex tests"
 prettier = "npx --no prettier livingdex/templates --write"
 prettier-check = "npx --no prettier livingdex/templates --check"
 biome-fix = "npx --no @biomejs/biome check livingdex --write"
-format = ["ruff-fix", "black", "prettier", "biome-fix"]
+format = ["ruff-fix", "ruff-format", "prettier", "biome-fix"]
 
 mypy = "mypy livingdex tests"
 ruff = "ruff check livingdex tests"
@@ -58,7 +58,6 @@ typenv = "0.2.0"
 watchfiles = "0.24.0"
 
 [tool.poetry.group.dev.dependencies]
-black = "24.10.0"
 mypy = "1.13.0"
 poethepoet = "0.29.0"
 pytest = "8.3.3"

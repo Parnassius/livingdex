@@ -39,7 +39,8 @@ async def setup_file_watches(app: web.Application, *, data_path: Path) -> None:
 
 
 async def add_headers(
-    request: web.Request, response: web.StreamResponse  # noqa: ARG001
+    request: web.Request,  # noqa: ARG001
+    response: web.StreamResponse,
 ) -> None:
     response.headers["Content-Security-Policy"] = (
         "default-src 'none'; "
