@@ -1,4 +1,5 @@
 import functools
+import itertools
 import json
 import time
 from dataclasses import InitVar, dataclass, field
@@ -84,13 +85,12 @@ class GameData:
         self.expected = save.boxable_forms
 
         self.data = save.box_data
-        self.other_saves_data = {
-            x: save.stem
-            for save in self.other_saves_paths
-            for box in PKHeXWrapper(save).box_data
-            for x in box
-            if x
-        }
+        self.other_saves_data = {}
+        self._load_other_save_data(save, self.save_path.stem)
+        for other_save_path in self.other_saves_paths:
+            self._load_other_save_data(
+                PKHeXWrapper(other_save_path), other_save_path.stem
+            )
 
         for attr in dir(self):
             if isinstance(getattr(type(self), attr, None), functools.cached_property):
@@ -100,3 +100,8 @@ class GameData:
                     pass
 
         self.timestamp = int(time.time())
+
+    def _load_other_save_data(self, save: PKHeXWrapper, name: str) -> None:
+        for pokemon in itertools.chain(save.party_data, *save.box_data):
+            if pokemon and pokemon not in self.other_saves_data:
+                self.other_saves_data[pokemon] = name

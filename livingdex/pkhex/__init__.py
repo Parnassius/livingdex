@@ -22,12 +22,16 @@ class PKHeXWrapper:
             return []
 
         return [
-            [
-                PKM(pkm.Context, pkm.Species, pkm.Form, pkm.IsEgg)
-                for pkm in self.save_file.GetBoxData(box_id)
-            ]
+            [PKM.from_pkhex(pkm) for pkm in self.save_file.GetBoxData(box_id)]
             for box_id in range(self.save_file.BoxCount)
         ]
+
+    @property
+    def party_data(self) -> list[PKM]:
+        if self.save_file is None:
+            return []
+
+        return [PKM.from_pkhex(pkm) for pkm in self.save_file.PartyData]
 
     @property
     def boxable_forms(self) -> list[list[PKM]]:

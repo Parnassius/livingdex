@@ -1,4 +1,5 @@
 from collections.abc import Sequence
+from typing import Self
 
 from livingdex.pkhex.core import PKHeX
 
@@ -18,6 +19,10 @@ class PKM:
         self.is_egg = is_egg
 
         self.only_form = False
+
+    @classmethod
+    def from_pkhex(cls, pkm: PKHeX.Core.PKM) -> Self:  # type: ignore[misc]
+        return cls(pkm.Context, pkm.Species, pkm.Form, pkm.IsEgg)
 
     @property
     def species_name(self) -> str:
