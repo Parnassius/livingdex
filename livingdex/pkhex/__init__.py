@@ -11,10 +11,16 @@ class PKHeXWrapper:
 
     @property
     def box_slot_count(self) -> int:
+        if self.save_file is None:
+            return 30
+
         return self.save_file.BoxSlotCount
 
     @property
     def box_data(self) -> list[list[PKM]]:
+        if self.save_file is None:
+            return []
+
         return [
             [
                 PKM(pkm.Context, pkm.Species, pkm.Form, pkm.IsEgg)
@@ -25,6 +31,9 @@ class PKHeXWrapper:
 
     @property
     def boxable_forms(self) -> list[list[PKM]]:
+        if self.save_file is None:
+            return []
+
         data = []
         personal = self.save_file.Personal
         for species in range(1, personal.MaxSpeciesID + 1):
