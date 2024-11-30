@@ -22,6 +22,8 @@
 
 body {
   margin: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 header {
@@ -29,7 +31,8 @@ header {
   top: 0;
   z-index: 1;
   background-color: var(--background-primary);
-  border-bottom: 4px solid;
+  border-style: solid;
+  border-width: 0 0 4px;
   menu {
     margin: 0;
     padding: 0;
@@ -66,8 +69,9 @@ main {
   }
   .box {
     display: flex;
-    justify-content: safe center;
-    overflow-x: auto;
+    justify-content: center;
+    max-width: 1200px;
+    margin: 0 auto;
     .box-label {
       position: sticky;
       left: 0;
@@ -108,8 +112,9 @@ main {
     }
     .box-content {
       display: grid;
-      grid-template-columns: repeat(var(--box-columns), 20ch);
+      grid-template-columns: repeat(var(--box-columns), minmax(15ch, 1fr));
       gap: 1px;
+      flex-grow: 1;
       background-color: var(--text-color);
       border: solid;
       border-width: 0 4px 4px 0;
@@ -117,14 +122,14 @@ main {
         display: flex;
         flex-direction: column;
         gap: 0.15em;
+        padding: 0 5px;
         height: 3em;
+        min-width: 0;
         text-align: center;
         justify-content: center;
         background-color: var(--background-primary);
         line-height: 1;
-        &:nth-child(6n + 1) {
-          border-left-width: 0;
-        }
+        text-wrap: balance;
         &[data-slot-status="caught"] {
           background-color: var(--background-caught);
         }
@@ -144,6 +149,39 @@ main {
         &[data-small-text]::after {
           content: attr(data-small-text);
           font-size: 0.8em;
+        }
+      }
+    }
+  }
+}
+
+@media (width <= 767px) {
+  body {
+    font-size: 0.8em;
+    flex-direction: column-reverse;
+  }
+  header {
+    top: initial;
+    bottom: 0;
+    border-width: 4px 0 0;
+  }
+  main {
+    margin-bottom: 0;
+    .box {
+      flex-direction: column;
+      .box-label {
+        position: sticky;
+        top: 0;
+        flex-basis: 0;
+        border-width: 0 0 4px;
+      }
+      .box-content {
+        overflow-x: auto;
+        border-width: 0 0 4px;
+      }
+      &:last-child {
+        .box-content {
+          border-bottom-width: 0;
         }
       }
     }
