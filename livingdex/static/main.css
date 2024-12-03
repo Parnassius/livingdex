@@ -69,9 +69,10 @@ main {
   }
   .box {
     display: flex;
-    justify-content: center;
+    justify-content: safe center;
     max-width: 1200px;
     margin: 0 auto;
+    overflow-x: auto;
     .box-label {
       position: sticky;
       left: 0;
@@ -169,6 +170,7 @@ main {
     margin-bottom: 0;
     .box {
       flex-direction: column;
+      overflow-x: initial;
       .box-label {
         position: sticky;
         top: 0;
