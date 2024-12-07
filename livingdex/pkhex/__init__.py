@@ -1,3 +1,4 @@
+import functools
 import itertools
 from pathlib import Path
 
@@ -22,7 +23,7 @@ class PKHeXWrapper:
             return []
 
         return [
-            [PKM.from_pkhex(pkm) for pkm in self.save_file.GetBoxData(box_id)]
+            [PKM.from_pkhex(self, pkm) for pkm in self.save_file.GetBoxData(box_id)]
             for box_id in range(self.save_file.BoxCount)
         ]
 
@@ -31,9 +32,9 @@ class PKHeXWrapper:
         if self.save_file is None:
             return []
 
-        return [PKM.from_pkhex(pkm) for pkm in self.save_file.PartyData]
+        return [PKM.from_pkhex(self, pkm) for pkm in self.save_file.PartyData]
 
-    @property
+    @functools.cached_property
     def boxable_forms(self) -> list[list[PKM]]:
         if self.save_file is None:
             return []
@@ -43,9 +44,8 @@ class PKHeXWrapper:
         for species in range(1, personal.MaxSpeciesID + 1):
             if not personal.IsSpeciesInGame(species):
                 continue
-            form0 = PKM(self.save_file.Context, species, 0)
+            form0 = PKM(self, species, 0)
             data.append(form0)
-            has_forms = False
             for form in range(1, len(form0.all_forms)):
                 if (
                     personal.IsPresentInGame(species, form)
@@ -55,9 +55,6 @@ class PKHeXWrapper:
                     and not form0.ignore_alternate_forms
                     and not form0.is_form_unobtainable(form)
                 ):
-                    has_forms = True
-                    data.append(PKM(self.save_file.Context, species, form))
-            if not has_forms:
-                form0.only_form = True
+                    data.append(PKM(self, species, form))
 
         return [list(x) for x in itertools.batched(data, self.save_file.BoxSlotCount)]

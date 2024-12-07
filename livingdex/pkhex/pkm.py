@@ -1,28 +1,29 @@
 from collections.abc import Sequence
-from typing import Self
+from typing import TYPE_CHECKING, Self
 
 from livingdex.pkhex.core import PKHeX
+
+if TYPE_CHECKING:
+    from livingdex.pkhex import PKHeXWrapper
 
 
 class PKM:
     def __init__(
         self,
-        context: PKHeX.Core.EntityContext,
+        save: "PKHeXWrapper",
         species: int,
         form: int,
         is_egg: bool = False,
     ) -> None:
-        self.context = context
+        self.save = save
 
         self.species = species
         self.form = form
         self.is_egg = is_egg
 
-        self.only_form = False
-
     @classmethod
-    def from_pkhex(cls, pkm: PKHeX.Core.PKM) -> Self:  # type: ignore[misc]
-        return cls(pkm.Context, pkm.Species, pkm.Form, pkm.IsEgg)
+    def from_pkhex(cls, save: "PKHeXWrapper", pkm: PKHeX.Core.PKM) -> Self:  # type: ignore[misc]
+        return cls(save, pkm.Species, pkm.Form, pkm.IsEgg)
 
     @property
     def species_name(self) -> str:
@@ -31,6 +32,14 @@ class PKM:
     @property
     def form_name(self) -> str:
         return self.all_forms[self.form]
+
+    @property
+    def only_form(self) -> bool:
+        return not any(
+            x.species == self.species and x.form != self.form
+            for box in self.save.boxable_forms
+            for x in box
+        )
 
     @property
     def ignore_alternate_forms(self) -> bool:
@@ -47,10 +56,10 @@ class PKM:
             PKHeX.Core.Species.Necrozma,  # Fusions
             PKHeX.Core.Species.Calyrex,  # Fusions
         ]
-        if self.context == PKHeX.Core.EntityContext.Gen3:
+        if self.save.save_file.Context == PKHeX.Core.EntityContext.Gen3:
             # Only one form is available, depending on the game being played
             ignored_species.append(PKHeX.Core.Species.Deoxys)
-        if self.context <= PKHeX.Core.EntityContext.Gen6:
+        if self.save.save_file.Context <= PKHeX.Core.EntityContext.Gen6:
             # Alternate forms revert to the default one when deposited in the PC
             ignored_species.extend(
                 [
@@ -64,9 +73,9 @@ class PKM:
     def is_form_unobtainable(self, form: int | None = None) -> bool:
         species = PKHeX.Core.Species(self.species)
         form = form or self.form
-        if self.context == PKHeX.Core.EntityContext.Gen7b and (species, form) in (
-            (PKHeX.Core.Species.Pikachu, 8),
-            (PKHeX.Core.Species.Eevee, 1),
+        if self.save.save_file.Context == PKHeX.Core.EntityContext.Gen7b and (
+            (species, form)
+            in ((PKHeX.Core.Species.Pikachu, 8), (PKHeX.Core.Species.Eevee, 1))
         ):
             # Pikachu/Eevee Starter
             # Not really unobtainable but they can't be traded to the other game
@@ -84,7 +93,7 @@ class PKM:
             strings.Types,
             strings.forms,
             PKHeX.Core.GameInfo.GenderSymbolUnicode,
-            self.context,
+            self.save.save_file.Context,
         )
 
     def __str__(self) -> str:
@@ -106,7 +115,7 @@ class PKM:
         cls = type(self)
         return (
             f"{cls.__module__}.{cls.__qualname__}"
-            f"({self.context!r}, {self.species!r}, {self.form!r}, {self.is_egg!r})"
+            f"({self.save!r}, {self.species!r}, {self.form!r}, {self.is_egg!r})"
         )
 
     def __bool__(self) -> bool:
