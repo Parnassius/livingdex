@@ -5,13 +5,13 @@ ENV PYTHONDONTWRITEBYTECODE=1
 ENV DATA_PATH=/data
 WORKDIR /app
 
-RUN apk add --no-cache dotnet8-runtime
+RUN apk add --no-cache dotnet9-runtime
 
 
 FROM base as builder
 
 RUN apk add --no-cache gcc musl-dev libffi-dev
-RUN apk add --no-cache dotnet8-sdk
+RUN apk add --no-cache dotnet9-sdk
 
 RUN python -m venv /opt/poetry-venv
 RUN /opt/poetry-venv/bin/pip install --upgrade pip setuptools
