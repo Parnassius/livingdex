@@ -36,7 +36,7 @@ async def game(request: web.Request) -> Mapping[str, Any]:
         "expected_data": game.expected,
         "game_data": game.data,
         "other_saves_data": game.other_saves_data,
-        "gb_gbc": game.gb_gbc,
+        "box_size": game.box_size,
         "timestamp": max(x.timestamp for x in all_games.values()),
     }
 

@@ -64,7 +64,7 @@ header {
 main {
   --box-columns: 6;
   margin-bottom: 1em;
-  &[data-gb-gbc] {
+  &[data-box-size="20"] {
     --box-columns: 5;
   }
   .box {

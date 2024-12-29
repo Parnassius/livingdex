@@ -17,7 +17,7 @@ class GameData:
     other_saves: InitVar[list[str] | None] = None
     save_path: Path = field(init=False)
     other_saves_paths: list[Path] = field(init=False)
-    gb_gbc: bool = field(init=False)
+    box_size: int = field(init=False)
     expected: list[list[PKM]] = field(init=False)
     data: list[list[PKM]] = field(init=False)
     other_saves_data: dict[PKM, str] = field(init=False)
@@ -80,7 +80,7 @@ class GameData:
     def load_data(self) -> None:
         save = PKHeXWrapper(self.save_path)
 
-        self.gb_gbc = save.box_slot_count == 20
+        self.box_size = save.box_slot_count
 
         self.expected = save.boxable_forms
 

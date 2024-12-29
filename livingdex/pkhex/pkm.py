@@ -1,4 +1,5 @@
 from collections.abc import Sequence
+from pathlib import Path
 from typing import TYPE_CHECKING, Self
 
 from livingdex.pkhex.core import PKHeX
@@ -130,7 +131,41 @@ class PKM:
         return hash(self._key)
 
     @property
-    def _key(self) -> tuple[int, int]:
+    def _key(self) -> tuple[Path, int, int]:
         if self.is_egg:
-            return (-1, 0)
-        return self.species, (self.form if not self.ignore_alternate_forms else 0)
+            return (self.save.save_path, -1, 0)
+        return (
+            self.save.save_path,
+            self.species,
+            (self.form if not self.ignore_alternate_forms else 0),
+        )
+
+
+class LGPEStarterPKM(PKM):
+    def __init__(self, save: "PKHeXWrapper") -> None:
+        super().__init__(save, 0, 0)
+
+    def __str__(self) -> str:
+        return "Starter"
+
+    def __repr__(self) -> str:
+        cls = type(self)
+        return f"{cls.__module__}.{cls.__qualname__}({self.save!r})"
+
+    def __bool__(self) -> bool:
+        return True
+
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, PKM):
+            return NotImplemented
+        if self.save.save_path != other.save.save_path:
+            return False
+        if type(other) is type(self):
+            return True
+        return (PKHeX.Core.Species(other.species), other.form) in (
+            (PKHeX.Core.Species.Pikachu, 8),
+            (PKHeX.Core.Species.Eevee, 1),
+        )
+
+    def __hash__(self) -> int:
+        return hash(self.save.save_path)
