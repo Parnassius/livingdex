@@ -4,7 +4,7 @@ build-backend = "poetry.core.masonry.api"
 
 
 [tool.mypy]
-python_version = "3.12"
+python_version = "3.13"
 strict = true
 
 # Disallow dynamic typing
@@ -49,7 +49,7 @@ description = ""
 authors = ["Parnassius <Parnassius@users.noreply.github.com>"]
 
 [tool.poetry.dependencies]
-python = ">=3.12,<3.13"
+python = ">=3.13,<3.14"
 aiohttp = "3.11.11"
 aiohttp-jinja2 = "1.6"
 aiohttp-sse = "2.2.0"
@@ -73,7 +73,7 @@ xfail_strict = true
 
 
 [tool.ruff]
-target-version = "py312"
+target-version = "py313"
 
 [tool.ruff.lint]
 select = [
