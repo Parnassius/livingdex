@@ -50,18 +50,18 @@ authors = ["Parnassius <Parnassius@users.noreply.github.com>"]
 
 [tool.poetry.dependencies]
 python = ">=3.12,<3.13"
-aiohttp = "3.11.8"
+aiohttp = "3.11.11"
 aiohttp-jinja2 = "1.6"
 aiohttp-sse = "2.2.0"
-pythonnet = "3.0.4"
+pythonnet = "3.0.5"
 typenv = "0.2.0"
-watchfiles = "1.0.0"
+watchfiles = "1.0.3"
 
 [tool.poetry.group.dev.dependencies]
-mypy = "1.13.0"
-poethepoet = "0.31.1"
-pytest = "8.3.3"
-ruff = "0.8.1"
+mypy = "1.14.1"
+poethepoet = "0.32.0"
+pytest = "8.3.4"
+ruff = "0.8.4"
 
 [tool.poetry.scripts]
 livingdex = "livingdex.__main__:main"
