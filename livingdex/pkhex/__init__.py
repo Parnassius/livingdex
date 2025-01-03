@@ -53,16 +53,10 @@ class PKHeXWrapper:
             if not personal.IsSpeciesInGame(species):
                 continue
             form0 = PKM(self, species, 0)
-            data.append(form0)
+            if form0.is_form_valid(0):
+                data.append(form0)
             for form in range(1, len(form0.all_forms)):
-                if (
-                    personal.IsPresentInGame(species, form)
-                    and not PKHeX.Core.FormInfo.IsBattleOnlyForm(
-                        species, form, self.save_file.Generation
-                    )
-                    and not form0.ignore_alternate_forms
-                    and not form0.is_form_unobtainable(form)
-                ):
+                if form0.is_form_valid(form) and not form0.ignore_alternate_forms:
                     data.append(PKM(self, species, form))
 
         return self._flatten_lgpe_boxes(

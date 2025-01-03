@@ -19,12 +19,25 @@ class PKM:
         self.save = save
 
         self.species = species
-        self.form = form
+        self._form = form
         self.is_egg = is_egg
 
     @classmethod
     def from_pkhex(cls, save: "PKHeXWrapper", pkm: PKHeX.Core.PKM) -> Self:  # type: ignore[misc]
         return cls(save, pkm.Species, pkm.Form, pkm.IsEgg)
+
+    @property
+    def form(self) -> int:
+        if self.ignore_alternate_forms:
+            return 0
+
+        if PKHeX.Core.Species(self.species) == PKHeX.Core.Species.Zygarde:
+            if self._form == 2:  # 10%
+                return 1
+            if self._form == 3:  # 50%
+                return 0
+
+        return self._form
 
     @property
     def species_name(self) -> str:
@@ -47,15 +60,12 @@ class PKM:
         ignored_species = [
             PKHeX.Core.Species.Mothim,  # The form is not cleared on evolution
             PKHeX.Core.Species.Arceus,  # Plates
-            PKHeX.Core.Species.Kyurem,  # Fusions
             PKHeX.Core.Species.Genesect,  # Drives
             PKHeX.Core.Species.Greninja,  # Battle Bond
             PKHeX.Core.Species.Scatterbug,  # Pattern for Vivillon
             PKHeX.Core.Species.Spewpa,  # Pattern for Vivillon
             PKHeX.Core.Species.Rockruff,  # Own Tempo
             PKHeX.Core.Species.Silvally,  # Memories
-            PKHeX.Core.Species.Necrozma,  # Fusions
-            PKHeX.Core.Species.Calyrex,  # Fusions
         ]
         if self.save.save_file.Context == PKHeX.Core.EntityContext.Gen3:
             # Only one form is available, depending on the game being played
@@ -71,20 +81,30 @@ class PKM:
             )
         return PKHeX.Core.Species(self.species) in ignored_species
 
-    def is_form_unobtainable(self, form: int | None = None) -> bool:
-        species = PKHeX.Core.Species(self.species)
-        form = form or self.form
-        if self.save.save_file.Context == PKHeX.Core.EntityContext.Gen7b and (
-            (species, form)
-            in ((PKHeX.Core.Species.Pikachu, 8), (PKHeX.Core.Species.Eevee, 1))
+    def is_form_valid(self, form: int) -> bool:
+        if (
+            not self.save.save_file.Personal.IsPresentInGame(self.species, form)
+            or PKHeX.Core.FormInfo.IsBattleOnlyForm(
+                self.species, form, self.save.save_file.Generation
+            )
+            or PKHeX.Core.FormInfo.IsUntradable(
+                self.species, form, 0, self.save.save_file.Generation
+            )
+            or PKHeX.Core.FormInfo.IsTotemForm(
+                self.species, form, self.save.save_file.Context
+            )
         ):
-            # Pikachu/Eevee Starter
-            # Not really unobtainable but they can't be traded to the other game
-            return True
+            return False
+
+        species = PKHeX.Core.Species(self.species)
         if species == PKHeX.Core.Species.Floette and form == 5:
             # Floette Eternal Flower, never released
-            return True
-        return False
+            return False
+        if species == PKHeX.Core.Species.Zygarde and form in (2, 3):
+            # Power Construct forms, they are aliased to the Aura Break ones
+            return False
+
+        return True
 
     @property
     def all_forms(self) -> Sequence[str]:
@@ -103,12 +123,7 @@ class PKM:
         if self.is_egg:
             return "Egg"
         name = self.species_name
-        if (
-            not self.only_form
-            and not self.ignore_alternate_forms
-            and not self.is_form_unobtainable()
-            and self.form_name
-        ):
+        if not self.only_form and not self.ignore_alternate_forms and self.form_name:
             name += f" {self.form_name}"
         return name
 
@@ -134,11 +149,7 @@ class PKM:
     def _key(self) -> tuple[Path, int, int]:
         if self.is_egg:
             return (self.save.save_path, -1, 0)
-        return (
-            self.save.save_path,
-            self.species,
-            (self.form if not self.ignore_alternate_forms else 0),
-        )
+        return (self.save.save_path, self.species, self.form)
 
 
 class LGPEStarterPKM(PKM):
