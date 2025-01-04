@@ -86,7 +86,7 @@ class GameData:
 
         self.data = save.box_data
         self.other_saves_data = {}
-        self._load_other_save_data(save, self.save_path.stem)
+        self._load_other_save_data(save, self.save_path.stem, main_save=True)
         for other_save_path in self.other_saves_paths:
             self._load_other_save_data(
                 PKHeXWrapper(other_save_path), other_save_path.stem
@@ -101,7 +101,14 @@ class GameData:
 
         self.timestamp = int(time.time())
 
-    def _load_other_save_data(self, save: PKHeXWrapper, name: str) -> None:
+    def _load_other_save_data(
+        self, save: PKHeXWrapper, name: str, *, main_save: bool = False
+    ) -> None:
         for pokemon in itertools.chain(save.party_data, *save.box_data):
             if pokemon and pokemon not in self.other_saves_data:
-                self.other_saves_data[pokemon] = name
+                pokemon_location = (
+                    "Party" if pokemon.box_id is None else f"Box {pokemon.box_id + 1}"
+                )
+                if not main_save:
+                    pokemon_location = f"{name} ({pokemon_location})"
+                self.other_saves_data[pokemon] = pokemon_location

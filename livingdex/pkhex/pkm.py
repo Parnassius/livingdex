@@ -1,5 +1,4 @@
 from collections.abc import Sequence
-from pathlib import Path
 from typing import TYPE_CHECKING, Self
 
 from livingdex.pkhex.core import PKHeX
@@ -15,6 +14,7 @@ class PKM:
         species: int,
         form: int,
         is_egg: bool = False,
+        box_id: int | None = None,
     ) -> None:
         self.save = save
 
@@ -22,9 +22,13 @@ class PKM:
         self._form = form
         self.is_egg = is_egg
 
+        self.box_id = box_id
+
     @classmethod
-    def from_pkhex(cls, save: "PKHeXWrapper", pkm: PKHeX.Core.PKM) -> Self:  # type: ignore[misc]
-        return cls(save, pkm.Species, pkm.Form, pkm.IsEgg)
+    def from_pkhex(  # type: ignore[misc]
+        cls, save: "PKHeXWrapper", pkm: PKHeX.Core.PKM, box_id: int | None = None
+    ) -> Self:
+        return cls(save, pkm.Species, pkm.Form, pkm.IsEgg, box_id=box_id)
 
     @property
     def form(self) -> int:
@@ -146,10 +150,10 @@ class PKM:
         return hash(self._key)
 
     @property
-    def _key(self) -> tuple[Path, int, int]:
+    def _key(self) -> tuple[int, int]:
         if self.is_egg:
-            return (self.save.save_path, -1, 0)
-        return (self.save.save_path, self.species, self.form)
+            return (-1, 0)
+        return (self.species, self.form)
 
 
 class LGPEStarterPKM(PKM):
@@ -169,14 +173,9 @@ class LGPEStarterPKM(PKM):
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, PKM):
             return NotImplemented
-        if self.save.save_path != other.save.save_path:
-            return False
         if type(other) is type(self):
             return True
         return (PKHeX.Core.Species(other.species), other.form) in (
             (PKHeX.Core.Species.Pikachu, 8),
             (PKHeX.Core.Species.Eevee, 1),
         )
-
-    def __hash__(self) -> int:
-        return hash(self.save.save_path)

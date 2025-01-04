@@ -9,7 +9,6 @@ from livingdex.pkhex.pkm import LGPEStarterPKM
 
 class PKHeXWrapper:
     def __init__(self, save_path: Path) -> None:
-        self.save_path = save_path
         self.save_file = PKHeX.Core.SaveUtil.GetVariantSAV(str(save_path))
 
     @property
@@ -29,7 +28,10 @@ class PKHeXWrapper:
 
         return self._flatten_lgpe_boxes(
             [
-                [PKM.from_pkhex(self, pkm) for pkm in self.save_file.GetBoxData(box_id)]
+                [
+                    PKM.from_pkhex(self, pkm, box_id)
+                    for pkm in self.save_file.GetBoxData(box_id)
+                ]
                 for box_id in range(self.save_file.BoxCount)
             ],
             False,
