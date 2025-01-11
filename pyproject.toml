@@ -22,16 +22,16 @@ warn_return_any = false
 
 
 [tool.poe.tasks]
-ruff-fix = "ruff check livingdex tests --fix-only"
-ruff-format = "ruff format livingdex tests"
-prettier = "npx --no prettier livingdex/templates --write"
-prettier-check = "npx --no prettier livingdex/templates --check"
-biome-fix = "npx --no @biomejs/biome check livingdex --write"
+ruff-fix = "ruff check src tests --fix-only"
+ruff-format = "ruff format src tests"
+prettier = "npx --no prettier src/livingdex/templates --write"
+prettier-check = "npx --no prettier src/livingdex/templates --check"
+biome-fix = "npx --no @biomejs/biome check src --write"
 format = ["ruff-fix", "ruff-format", "prettier", "biome-fix"]
 
-mypy = "mypy livingdex tests"
-ruff = "ruff check livingdex tests"
-biome = "npx --no @biomejs/biome ci --error-on-warnings livingdex"
+mypy = "mypy src tests"
+ruff = "ruff check src tests"
+biome = "npx --no @biomejs/biome ci --error-on-warnings src"
 pytest = "pytest"
 all = ["format", "mypy", "ruff", "biome", "pytest"]
 
