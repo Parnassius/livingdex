@@ -1,6 +1,29 @@
+[project]
+name = "livingdex"
+version = "0.1.0"
+requires-python = ">=3.13"
+dependencies = [
+    "aiohttp==3.11.11",
+    "aiohttp-jinja2==1.6",
+    "aiohttp-sse==2.2.0",
+    "pythonnet==3.0.5",
+    "typenv==0.2.0",
+    "watchfiles==1.0.3",
+]
+
+[project.scripts]
+livingdex = "livingdex.__main__:main"
+
+[dependency-groups]
+dev = [
+    "mypy==1.14.1",
+    "pytest==8.3.4",
+    "ruff==0.8.4",
+]
+
 [build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
 
 [tool.mypy]
@@ -21,59 +44,10 @@ disallow_any_unimported = false
 warn_return_any = false
 
 
-[tool.poe.tasks]
-ruff-fix = "ruff check src tests --fix-only"
-ruff-format = "ruff format src tests"
-prettier = "npx --no prettier src/livingdex/templates --write"
-prettier-check = "npx --no prettier src/livingdex/templates --check"
-biome-fix = "npx --no @biomejs/biome check src --write"
-format = ["ruff-fix", "ruff-format", "prettier", "biome-fix"]
-
-mypy = "mypy src tests"
-ruff = "ruff check src tests"
-biome = "npx --no @biomejs/biome ci --error-on-warnings src"
-pytest = "pytest"
-all = ["format", "mypy", "ruff", "biome", "pytest"]
-
-pkhex.shell = """
-    rm -rf nuget PKHeX.Core.dll
-    dotnet restore --packages nuget
-    cp nuget/pkhex.core/*/lib/net*/PKHeX.Core.dll .
-"""
-
-
-[tool.poetry]
-name = "livingdex"
-version = "0.1.0"
-description = ""
-authors = ["Parnassius <Parnassius@users.noreply.github.com>"]
-
-[tool.poetry.dependencies]
-python = ">=3.13,<3.14"
-aiohttp = "3.11.11"
-aiohttp-jinja2 = "1.6"
-aiohttp-sse = "2.2.0"
-pythonnet = "3.0.5"
-typenv = "0.2.0"
-watchfiles = "1.0.3"
-
-[tool.poetry.group.dev.dependencies]
-mypy = "1.14.1"
-poethepoet = "0.32.0"
-pytest = "8.3.4"
-ruff = "0.8.4"
-
-[tool.poetry.scripts]
-livingdex = "livingdex.__main__:main"
-
-
 [tool.pytest.ini_options]
 addopts = "--strict-config --strict-markers"
 xfail_strict = true
 
-
-[tool.ruff]
-target-version = "py313"
 
 [tool.ruff.lint]
 select = [

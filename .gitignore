@@ -1,6 +1,12 @@
 __pycache__
+*.py[oc]
+build
+dist
+wheels
+*.egg-info
+.venv
 /node_modules
 /nuget
 /obj
-/.env
 /PKHeX.Core.dll
+.env
