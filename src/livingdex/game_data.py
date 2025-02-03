@@ -24,7 +24,7 @@ class GameData:
     timestamp: int = field(init=False)
 
     def __post_init__(
-        self, base_path: Path, save: str, other_saves: list[str] | None = None
+        self, base_path: Path, save: str, other_saves: list[str] | None
     ) -> None:
         self.save_path = base_path / save
         if other_saves is None:
