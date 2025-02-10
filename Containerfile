@@ -5,6 +5,7 @@ ENV PYTHONUNBUFFERED=1
 ENV DATA_PATH=/data
 WORKDIR /app
 
+RUN apk upgrade --no-cache
 RUN apk add --no-cache dotnet8-runtime
 
 
