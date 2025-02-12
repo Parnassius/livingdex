@@ -5,6 +5,7 @@
   --background-primary: light-dark(#fff, #222);
 
   --background-caught: light-dark(#bda, #251);
+  --background-evo: light-dark(#bae, #428);
   --background-other-game: light-dark(#ed9, #651);
   --background-wrong: light-dark(#eaa, #611);
 
@@ -92,13 +93,38 @@ main {
         ) {
         background-color: var(--background-caught);
       }
+      &:has(~ .box-content > div[data-slot-status="evo"]) {
+        background-color: var(--background-evo);
+      }
       &:has(~ .box-content > div[data-slot-status="other-game"]) {
         background-color: var(--background-other-game);
       }
       &:has(~ .box-content > div[data-slot-status="wrong"]) {
         background-color: var(--background-wrong);
       }
-      &:is(
+      &:where(
+          &:has(~ .box-content > div[data-slot-status="evo"]):has(
+              ~ .box-content > div[data-slot-status="other-game"]
+            )
+        ) {
+        background-image: linear-gradient(
+          to right bottom,
+          var(--background-evo) calc(50% - 1px),
+          var(--background-other-game) calc(50% + 1px)
+        );
+      }
+      &:where(
+          &:has(~ .box-content > div[data-slot-status="evo"]):has(
+              ~ .box-content > div[data-slot-status="wrong"]
+            )
+        ) {
+        background-image: linear-gradient(
+          to right bottom,
+          var(--background-evo) calc(50% - 1px),
+          var(--background-wrong) calc(50% + 1px)
+        );
+      }
+      &:where(
           &:has(~ .box-content > div[data-slot-status="wrong-and-other-game"]),
           &:has(~ .box-content > div[data-slot-status="other-game"]):has(
               ~ .box-content > div[data-slot-status="wrong"]
@@ -108,6 +134,22 @@ main {
           to right bottom,
           var(--background-other-game) calc(50% - 1px),
           var(--background-wrong) calc(50% + 1px)
+        );
+      }
+      &:where(
+          &:has(~ .box-content > div[data-slot-status="evo"]):where(
+              &:has(~ .box-content > div[data-slot-status="wrong-and-other-game"]),
+              &:has(~ .box-content > div[data-slot-status="other-game"]):has(
+                  ~ .box-content > div[data-slot-status="wrong"]
+                )
+            )
+        ) {
+        background-image: linear-gradient(
+          to right bottom,
+          var(--background-evo) calc(100% / 3 - 1px),
+          var(--background-other-game) calc(100% / 3 - 1px),
+          var(--background-other-game) calc(100% / 3 * 2 - 1px),
+          var(--background-wrong) calc(100% / 3 * 2 + 1px)
         );
       }
     }
@@ -133,6 +175,9 @@ main {
         text-wrap: balance;
         &[data-slot-status="caught"] {
           background-color: var(--background-caught);
+        }
+        &[data-slot-status="evo"] {
+          background-color: var(--background-evo);
         }
         &[data-slot-status="other-game"] {
           background-color: var(--background-other-game);

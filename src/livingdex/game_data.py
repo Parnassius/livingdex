@@ -62,6 +62,8 @@ class GameData:
                 ):
                     if pokemon == data_pokemon:
                         box_data.append("caught")
+                    elif pokemon.evolves_from(data_pokemon):
+                        box_data.append(f"evo|{data_pokemon}")
                     elif pokemon in self.other_saves_data:
                         box_data.append(
                             "wrong-and-other-game|"

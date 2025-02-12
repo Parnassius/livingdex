@@ -121,6 +121,13 @@ class PKM:
             self.save.save_file.Context,
         )
 
+    def evolves_from(self, other: "PKM") -> bool:
+        tree = PKHeX.Core.EvolutionTree.GetEvolutionTree(self.save.save_file.Context)
+        return any(
+            (pre.Item1, pre.Item2) == (other.species, other.form)
+            for pre in tree.Reverse.GetPreEvolutions(self.species, self.form)
+        )
+
     def __str__(self) -> str:
         if not self:
             return ""
