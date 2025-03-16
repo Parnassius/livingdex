@@ -107,6 +107,13 @@ class PKM:
         if species == PKHeX.Core.Species.Zygarde and form in (2, 3):
             # Power Construct forms, they are aliased to the Aura Break ones
             return False
+        if (
+            species == PKHeX.Core.Species.Magearna
+            and form == 1
+            and self.save.save_file.Context <= PKHeX.Core.EntityContext.Gen7
+        ):
+            # Magearna Original Color, unreleased before Generation 8
+            return False
 
         return True
 
