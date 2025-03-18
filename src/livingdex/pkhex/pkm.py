@@ -129,6 +129,8 @@ class PKM:
         )
 
     def evolves_from(self, other: "PKM") -> bool:
+        if other.is_egg:
+            return False
         tree = PKHeX.Core.EvolutionTree.GetEvolutionTree(self.save.save_file.Context)
         return any(
             (pre.Item1, pre.Item2) == (other.species, other.form)
