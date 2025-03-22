@@ -133,7 +133,7 @@ class PKM:
             return False
         tree = PKHeX.Core.EvolutionTree.GetEvolutionTree(self.save.save_file.Context)
         return any(
-            (pre.Item1, pre.Item2) == (other.species, other.form)
+            PKM(self.save, pre.Item1, pre.Item2) == other
             for pre in tree.Reverse.GetPreEvolutions(self.species, self.form)
         )
 
