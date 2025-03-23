@@ -1,4 +1,5 @@
-from collections.abc import Sequence
+import copy
+from collections.abc import Iterable, Sequence
 from typing import TYPE_CHECKING, Self
 
 from livingdex.pkhex.core import PKHeX
@@ -20,6 +21,7 @@ class PKM:
 
         self.species = species
         self._form = form
+        self.form_argument = 0
         self.is_egg = is_egg
 
         self.box_id = box_id
@@ -49,7 +51,10 @@ class PKM:
 
     @property
     def form_name(self) -> str:
-        return self.all_forms[self.form]
+        form = self.all_forms[self.form]
+        if PKHeX.Core.Species(self.species) == PKHeX.Core.Species.Alcremie:
+            form += f" {PKHeX.Core.AlcremieDecoration(self.form_argument)}"
+        return form
 
     @property
     def only_form(self) -> bool:
@@ -70,11 +75,13 @@ class PKM:
             PKHeX.Core.Species.Spewpa,  # Pattern for Vivillon
             PKHeX.Core.Species.Rockruff,  # Own Tempo
             PKHeX.Core.Species.Silvally,  # Memories
+            PKHeX.Core.Species.Koraidon,  # Builds
+            PKHeX.Core.Species.Miraidon,  # Modes
         ]
-        if self.save.save_file.Context == PKHeX.Core.EntityContext.Gen3:
+        if self.save.save_file.Generation == 3:
             # Only one form is available, depending on the game being played
             ignored_species.append(PKHeX.Core.Species.Deoxys)
-        if self.save.save_file.Context <= PKHeX.Core.EntityContext.Gen6:
+        if self.save.save_file.Generation <= 6:
             # Alternate forms revert to the default one when deposited in the PC
             ignored_species.extend(
                 [
@@ -110,9 +117,22 @@ class PKM:
         if (
             species == PKHeX.Core.Species.Magearna
             and form == 1
-            and self.save.save_file.Context <= PKHeX.Core.EntityContext.Gen7
+            and self.save.save_file.Generation <= 7
         ):
             # Magearna Original Color, unreleased before Generation 8
+            return False
+
+        transfer_only_species = []
+        if self.save.save_file.Context == PKHeX.Core.EntityContext.Gen8:
+            transfer_only_species = [
+                PKHeX.Core.Species.Diancie,
+                PKHeX.Core.Species.Magearna,
+                PKHeX.Core.Species.Zeraora,
+                PKHeX.Core.Species.Meltan,
+                PKHeX.Core.Species.Melmetal,
+            ]
+
+        if species in transfer_only_species:
             return False
 
         return True
@@ -127,6 +147,20 @@ class PKM:
             PKHeX.Core.GameInfo.GenderSymbolUnicode,
             self.save.save_file.Context,
         )
+
+    @property
+    def forms_with_arguments(self) -> Iterable[Self]:
+        yield self
+
+        if PKHeX.Core.Species(self.species) == PKHeX.Core.Species.Alcremie:
+            for form_argument in range(
+                PKHeX.Core.FormArgumentUtil.GetFormArgumentMax(
+                    self.species, self.form, self.save.save_file.Context
+                )
+            ):
+                new_form = copy.copy(self)
+                new_form.form_argument = form_argument + 1
+                yield new_form
 
     def evolves_from(self, other: "PKM") -> bool:
         if other.is_egg:

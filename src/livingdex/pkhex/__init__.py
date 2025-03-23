@@ -26,16 +26,18 @@ class PKHeXWrapper:
         if self.save_file is None:
             return []
 
-        return self._flatten_lgpe_boxes(
+        data = [
             [
-                [
-                    PKM.from_pkhex(self, pkm, box_id)
-                    for pkm in self.save_file.GetBoxData(box_id)
-                ]
-                for box_id in range(self.save_file.BoxCount)
-            ],
-            False,
-        )
+                PKM.from_pkhex(self, pkm, box_id)
+                for pkm in self.save_file.GetBoxData(box_id)
+            ]
+            for box_id in range(self.save_file.BoxCount)
+        ]
+
+        if isinstance(self.save_file, PKHeX.Core.SAV7b):
+            data = [[x for box in data for x in box]]
+
+        return data
 
     @property
     def party_data(self) -> list[PKM]:
@@ -49,29 +51,54 @@ class PKHeXWrapper:
         if self.save_file is None:
             return []
 
-        data = []
+        data: list[PKM] = []
+        empty_slot = PKM(self, 0, 0)
         personal = self.save_file.Personal
+
+        if isinstance(self.save_file, PKHeX.Core.SAV7b):
+            data.append(LGPEStarterPKM(self))
+
         for species in range(1, personal.MaxSpeciesID + 1):
             if not personal.IsSpeciesInGame(species):
                 continue
             form0 = PKM(self, species, 0)
             if form0.is_form_valid(0):
-                data.append(form0)
+                data.extend(form0.forms_with_arguments)
             for form in range(1, len(form0.all_forms)):
                 if form0.is_form_valid(form) and not form0.ignore_alternate_forms:
-                    data.append(PKM(self, species, form))
+                    data.extend(PKM(self, species, form).forms_with_arguments)
 
-        return self._flatten_lgpe_boxes(
-            [list(x) for x in itertools.batched(data, self.save_file.BoxSlotCount)],
-            True,
-        )
+        sections = {
+            PKHeX.Core.SAV8SWSH: ["PokeDexIndex", "ArmorDexIndex", "CrownDexIndex"],
+            PKHeX.Core.SAV8LA: ["DexIndexHisui"],
+            PKHeX.Core.SAV9SV: ["DexPaldea", "DexKitakami", "DexBlueberry"],
+        }
 
-    def _flatten_lgpe_boxes(
-        self, data: list[list[PKM]], boxable_forms: bool
-    ) -> list[list[PKM]]:
+        if type(self.save_file) in sections:
+            dexes = sections[type(self.save_file)]
+            data_regional_dexes: dict[str, list[PKM]] = {dex: [] for dex in dexes}
+            data_other = []
+            for pkm in data:
+                for dex in dexes:
+                    if getattr(personal[pkm.species, pkm.form], dex, None):
+                        data_regional_dexes[dex].append(pkm)
+                        break
+                else:
+                    data_other.append(pkm)
+            data = []
+            for dex in dexes:
+                data_regional_dexes[dex].sort(
+                    key=lambda x: getattr(personal[x.species, x.form], dex)
+                )
+                data.extend(data_regional_dexes[dex])
+                if filled_slots := len(data) % self.box_slot_count:
+                    data.extend([empty_slot] * (self.box_slot_count - filled_slots))
+            data.extend(data_other)
+
+        if filled_slots := len(data) % self.box_slot_count:
+            data.extend([empty_slot] * (self.box_slot_count - filled_slots))
+
         if isinstance(self.save_file, PKHeX.Core.SAV7b):
-            data = [[x for box in data for x in box]]
-            if boxable_forms:
-                data[0].insert(0, LGPEStarterPKM(self))
+            return [data]
 
-        return data
+        return [list(x) for x in itertools.batched(data, self.box_slot_count)]

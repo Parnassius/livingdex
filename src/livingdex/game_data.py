@@ -39,14 +39,15 @@ class GameData:
             1
             for box_id, box in enumerate(self.expected)
             for pokemon_id, pokemon in enumerate(box)
-            if len(self.data) > box_id
+            if pokemon
+            and len(self.data) > box_id
             and len(self.data[box_id]) > pokemon_id
             and pokemon == self.data[box_id][pokemon_id]
         )
 
     @functools.cached_property
     def total(self) -> int:
-        return sum(len(x) for x in self.expected)
+        return sum(1 for box in self.expected for pokemon in box if pokemon)
 
     @functools.cached_property
     def json_data(self) -> str:
@@ -54,6 +55,8 @@ class GameData:
         for box_id, box in enumerate(self.expected):
             box_data = []
             for pokemon_id, pokemon in enumerate(box):
+                if not pokemon:
+                    continue
                 data_pokemon = self.data[box_id][pokemon_id]
                 if (
                     len(self.data) > box_id

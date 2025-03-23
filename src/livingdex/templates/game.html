@@ -32,35 +32,34 @@
           <div class="box-label">{{ loop.index }}</div>
           <div class="box-content">
             {% for pokemon in box_data %}
-              {% set slot_status = "missing" %}
-              {% set small_text = None %}
-              {% if game_data[box_id][loop.index0] %}
-                {% if pokemon == game_data[box_id][loop.index0] %}
-                  {% set slot_status = "caught" %}
-                {% elif pokemon.evolves_from(game_data[box_id][loop.index0]) %}
-                  {% set slot_status = "evo" %}
-                  {% set small_text = game_data[box_id][loop.index0] %}
+              {% if pokemon %}
+                {% set slot_status = "missing" %}
+                {% set small_text = None %}
+                {% if game_data[box_id][loop.index0] %}
+                  {% if pokemon == game_data[box_id][loop.index0] %}
+                    {% set slot_status = "caught" %}
+                  {% elif pokemon.evolves_from(game_data[box_id][loop.index0]) %}
+                    {% set slot_status = "evo" %}
+                    {% set small_text = game_data[box_id][loop.index0] %}
+                  {% elif pokemon in other_saves_data %}
+                    {% set slot_status = "wrong-and-other-game" %}
+                    {% set small_text = game_data[box_id][loop.index0] ~ " / " ~ other_saves_data[pokemon] %}
+                  {% else %}
+                    {% set slot_status = "wrong" %}
+                    {% set small_text = game_data[box_id][loop.index0] %}
+                  {% endif %}
                 {% elif pokemon in other_saves_data %}
-                  {% set slot_status = "wrong-and-other-game" %}
-                  {% set small_text = game_data[box_id][loop.index0] ~ " / " ~ other_saves_data[pokemon] %}
-                {% else %}
-                  {% set slot_status = "wrong" %}
-                  {% set small_text = game_data[box_id][loop.index0] %}
+                  {% set slot_status = "other-game" %}
+                  {% set small_text = other_saves_data[pokemon] %}
                 {% endif %}
-              {% elif pokemon in other_saves_data %}
-                {% set slot_status = "other-game" %}
-                {% set small_text = other_saves_data[pokemon] %}
-              {% endif %}
-              <div
-                data-slot-status="{{ slot_status }}"
-                {% if small_text %}data-small-text="{{ small_text }}"{% endif %}
-              >
-                {{ pokemon }}
-              </div>
-              {% if loop.last %}
-                {% for _ in range(loop.index0 % box_size, box_size - 1) %}
-                  <div data-slot-status="filler"></div>
-                {% endfor %}
+                <div
+                  data-slot-status="{{ slot_status }}"
+                  {% if small_text %}data-small-text="{{ small_text }}"{% endif %}
+                >
+                  {{ pokemon }}
+                </div>
+              {% else %}
+                <div data-slot-status="filler"></div>
               {% endif %}
             {% endfor %}
           </div>
