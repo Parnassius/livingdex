@@ -101,4 +101,6 @@ class PKHeXWrapper:
         if isinstance(self.save_file, PKHeX.Core.SAV7b):
             return [data]
 
-        return [list(x) for x in itertools.batched(data, self.box_slot_count)]
+        return [
+            list(x) for x in itertools.batched(data, self.box_slot_count, strict=False)
+        ]
