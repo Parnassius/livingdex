@@ -166,14 +166,26 @@ class PKM:
         info = self.save.save_file.Personal[self.species, self.form]
 
         is_local = False
-        if self.save.save_file.Context == PKHeX.Core.EntityContext.Gen8a:
+        if info.IsRegionalForm:
+            is_local = info.RegionalFormIndex == info.LocalFormIndex
+        elif self.save.save_file.Context == PKHeX.Core.EntityContext.Gen8:
+            is_local = (
+                # Some regional forms don't have the IsRegionalForm flag set
+                (PKHeX.Core.Species(self.species), self.form)
+                in [
+                    (PKHeX.Core.Species.Weezing, 1),
+                    (PKHeX.Core.Species.Stunfisk, 1),
+                    (PKHeX.Core.Species.Articuno, 1),
+                    (PKHeX.Core.Species.Zapdos, 1),
+                    (PKHeX.Core.Species.Moltres, 1),
+                ]
+            )
+        elif self.save.save_file.Context == PKHeX.Core.EntityContext.Gen8a:
             is_local = (
                 # Sneasel is the only Pokemon with more than one regional form
                 PKHeX.Core.Species(self.species) == PKHeX.Core.Species.Sneasel
                 and self.form == 1
             )
-        elif info.IsRegionalForm:
-            is_local = info.RegionalFormIndex == info.LocalFormIndex
 
         return (getattr(info, dex_attribute), 0 if is_local else 1)
 
