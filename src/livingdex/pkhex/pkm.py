@@ -162,6 +162,21 @@ class PKM:
                 new_form.form_argument = form_argument + 1
                 yield new_form
 
+    def dex_order(self, dex_attribute: str) -> tuple[int, int]:
+        info = self.save.save_file.Personal[self.species, self.form]
+
+        is_local = False
+        if self.save.save_file.Context == PKHeX.Core.EntityContext.Gen8a:
+            is_local = (
+                # Sneasel is the only Pokemon with more than one regional form
+                PKHeX.Core.Species(self.species) == PKHeX.Core.Species.Sneasel
+                and self.form == 1
+            )
+        elif info.IsRegionalForm:
+            is_local = info.RegionalFormIndex == info.LocalFormIndex
+
+        return (getattr(info, dex_attribute), 0 if is_local else 1)
+
     def evolves_from(self, other: "PKM") -> bool:
         if other.is_egg:
             return False

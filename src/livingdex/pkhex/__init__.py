@@ -87,9 +87,7 @@ class PKHeXWrapper:
                     data_other.append(pkm)
             data = []
             for dex in dexes:
-                data_regional_dexes[dex].sort(
-                    key=lambda x: getattr(personal[x.species, x.form], dex)
-                )
+                data_regional_dexes[dex].sort(key=lambda x: x.dex_order(dex))
                 data.extend(data_regional_dexes[dex])
                 if filled_slots := len(data) % self.box_slot_count:
                     data.extend([empty_slot] * (self.box_slot_count - filled_slots))
