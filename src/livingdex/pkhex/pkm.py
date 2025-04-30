@@ -14,6 +14,7 @@ class PKM:
         save: "PKHeXWrapper",
         species: int,
         form: int,
+        form_argument: int = 0,
         is_egg: bool = False,
         box_id: int | None = None,
     ) -> None:
@@ -21,7 +22,7 @@ class PKM:
 
         self.species = species
         self._form = form
-        self.form_argument = 0
+        self._form_argument = form_argument
         self.is_egg = is_egg
 
         self.box_id = box_id
@@ -30,7 +31,14 @@ class PKM:
     def from_pkhex(  # type: ignore[misc]
         cls, save: "PKHeXWrapper", pkm: PKHeX.Core.PKM, box_id: int | None = None
     ) -> Self:
-        return cls(save, pkm.Species, pkm.Form, pkm.IsEgg, box_id=box_id)
+        return cls(
+            save,
+            pkm.Species,
+            pkm.Form,
+            pkm.FormArgument if isinstance(pkm, PKHeX.Core.IFormArgument) else 0,
+            pkm.IsEgg,
+            box_id=box_id,
+        )
 
     @property
     def form(self) -> int:
@@ -44,6 +52,12 @@ class PKM:
                 return 0
 
         return self._form
+
+    @property
+    def form_argument(self) -> int:
+        if PKHeX.Core.Species(self.species) == PKHeX.Core.Species.Alcremie:
+            return self._form_argument
+        return 0
 
     @property
     def species_name(self) -> str:
@@ -159,7 +173,7 @@ class PKM:
                 )
             ):
                 new_form = copy.copy(self)
-                new_form.form_argument = form_argument + 1
+                new_form._form_argument = form_argument + 1
                 yield new_form
 
     def dex_order(self, dex_attribute: str) -> tuple[int, int]:
@@ -227,10 +241,10 @@ class PKM:
         return hash(self._key)
 
     @property
-    def _key(self) -> tuple[int, int]:
+    def _key(self) -> tuple[int, int, int]:
         if self.is_egg:
-            return (-1, 0)
-        return (self.species, self.form)
+            return (-1, 0, 0)
+        return (self.species, self.form, self.form_argument)
 
 
 class LGPEStarterPKM(PKM):
