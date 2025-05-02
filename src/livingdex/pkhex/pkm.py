@@ -145,6 +145,11 @@ class PKM:
                 PKHeX.Core.Species.Meltan,
                 PKHeX.Core.Species.Melmetal,
             ]
+        elif self.save.save_file.Context == PKHeX.Core.EntityContext.Gen8b:
+            transfer_only_species = [
+                PKHeX.Core.Species.Celebi,
+                PKHeX.Core.Species.Deoxys,
+            ]
 
         if species in transfer_only_species:
             return False
