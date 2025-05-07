@@ -24,26 +24,24 @@
 body {
   margin: 0;
   display: flex;
-  flex-direction: column;
+  justify-content: center;
 }
 
 header {
   position: sticky;
   top: 0;
-  z-index: 1;
+  max-height: 100vh;
+  overflow-y: auto;
+  max-width: 200px;
   background-color: var(--background-primary);
-  border-style: solid;
-  border-width: 0 0 4px;
   menu {
     margin: 0;
-    padding: 0;
+    padding: 1rem 0;
     list-style-type: none;
-    display: flex;
-    justify-content: safe center;
-    overflow-x: auto;
     li {
       a {
         display: inline-block;
+        width: 100%;
         padding: 0.5em 1em;
         color: inherit;
         white-space: nowrap;
@@ -64,19 +62,18 @@ header {
 
 main {
   --box-columns: 6;
-  margin-bottom: 1em;
+  flex-grow: 1;
+  margin: 1rem 0;
+  max-width: 1200px;
+  border-top: 4px solid;
   &[data-box-size="20"] {
     --box-columns: 5;
   }
   .box {
     display: flex;
     justify-content: safe center;
-    max-width: 1200px;
-    margin: 0 auto;
     overflow-x: auto;
     .box-label {
-      position: sticky;
-      left: 0;
       flex-basis: 4ch;
       flex-shrink: 0;
       background-color: var(--background-primary);
@@ -167,7 +164,6 @@ main {
         gap: 0.15em;
         padding: 0 5px;
         height: 3em;
-        min-width: 0;
         text-align: center;
         justify-content: center;
         background-color: var(--background-primary);
@@ -201,17 +197,35 @@ main {
   }
 }
 
-@media (width <= 767px) {
+@media (width <= 1199px) {
   body {
-    font-size: 0.8em;
     flex-direction: column-reverse;
   }
   header {
     top: initial;
     bottom: 0;
-    border-width: 4px 0 0;
+    z-index: 1;
+    max-width: initial;
+    margin-top: -4px;
+    menu {
+      display: flex;
+      justify-content: safe center;
+      overflow-x: auto;
+      padding: 0;
+      border-top: 4px solid;
+    }
   }
   main {
+    margin: 0;
+  }
+}
+
+@media (width <= 979px) {
+  body {
+    font-size: 0.8em;
+  }
+  main {
+    border-top-width: 0;
     margin-bottom: 0;
     .box {
       flex-direction: column;
@@ -225,11 +239,6 @@ main {
       .box-content {
         overflow-x: auto;
         border-width: 0 0 4px;
-      }
-      &:last-child {
-        .box-content {
-          border-bottom-width: 0;
-        }
       }
     }
   }
