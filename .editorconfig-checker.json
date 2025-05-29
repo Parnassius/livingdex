@@ -1,0 +1,6 @@
+{
+  "Exclude": [
+    "livingdex\\.csproj",
+    "packages\\.lock\\.json"
+  ]
+}
