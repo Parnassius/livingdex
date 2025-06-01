@@ -2,6 +2,7 @@
 deps:
 	@uv sync
 	@npm ci
+	@rm -rf nuget
 	@dotnet restore --packages nuget
 	@cp nuget/pkhex.core/*/lib/net*/PKHeX.Core.dll .venv/lib/python*/site-packages
 
