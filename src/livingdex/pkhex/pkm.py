@@ -28,7 +28,7 @@ class PKM:
         self.box_id = box_id
 
     @classmethod
-    def from_pkhex(  # type: ignore[misc]
+    def from_pkhex(
         cls, save: "PKHeXWrapper", pkm: PKHeX.Core.PKM, box_id: int | None = None
     ) -> Self:
         return cls(
