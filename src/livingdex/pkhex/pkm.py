@@ -118,6 +118,9 @@ class PKM:
             or PKHeX.Core.FormInfo.IsTotemForm(
                 self.species, form, self.save.save_file.Context
             )
+            or PKHeX.Core.FormInfo.IsLordForm(
+                self.species, form, self.save.save_file.Context
+            )
         ):
             return False
 
