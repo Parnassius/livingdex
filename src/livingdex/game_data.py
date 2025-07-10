@@ -1,37 +1,48 @@
+import asyncio
 import functools
 import itertools
 import json
 import time
-from dataclasses import InitVar, dataclass, field
 from pathlib import Path
 
-from livingdex.pkhex import PKM, PKHeXWrapper
+from livingdex import game_info
+from livingdex.pkhex import PKHeX
+from livingdex.pkm import PKM
 
 
-@dataclass(kw_only=True)
 class GameData:
-    game_id: str
-    name: str
-    base_path: InitVar[Path]
-    save: InitVar[str]
-    other_saves: InitVar[list[str] | None] = None
-    save_path: Path = field(init=False)
-    other_saves_paths: list[Path] = field(init=False)
-    box_size: int = field(init=False)
-    expected: list[list[PKM]] = field(init=False)
-    data: list[list[PKM]] = field(init=False)
-    other_saves_data: dict[PKM, str] = field(init=False)
-    timestamp: int = field(init=False)
-
-    def __post_init__(
-        self, base_path: Path, save: str, other_saves: list[str] | None
+    def __init__(
+        self,
+        game_id: str,
+        name: str,
+        base_path: Path,
+        save: str,
+        other_saves: list[str] | None = None,
+        skipped_pokemon: list[list[int]] | None = None,
     ) -> None:
-        self.save_path = base_path / save
+        self.game_id = game_id
+        self.name = name
+
+        self.save_path = (base_path / save).resolve()
         if other_saves is None:
             self.other_saves_paths = []
         else:
-            self.other_saves_paths = [base_path / x for x in other_saves]
-        self.load_data()
+            self.other_saves_paths = [(base_path / x).resolve() for x in other_saves]
+
+        if skipped_pokemon is None:
+            self.skipped_pokemon = []
+        else:
+            self.skipped_pokemon = [
+                (PKHeX.Core.Species(species), form) for species, form in skipped_pokemon
+            ]
+
+        self.box_size: int
+        self.expected: list[list[PKM]]
+        self.data: list[list[PKM]]
+        self.other_saves_data: dict[PKM, str]
+        self.timestamp: int
+
+        self._load_data(*self._load_game_info())
 
     @functools.cached_property
     def caught(self) -> int:
@@ -82,9 +93,13 @@ class GameData:
 
         return json.dumps(data)
 
-    def load_data(self) -> None:
-        save = PKHeXWrapper(self.save_path)
+    async def load_data(self) -> None:
+        save, other_saves = await asyncio.to_thread(self._load_game_info)
+        self._load_data(save, other_saves)
 
+    def _load_data(
+        self, save: game_info.GameInfo, other_saves: dict[str, game_info.GameInfo]
+    ) -> None:
         self.box_size = save.box_slot_count
 
         self.expected = save.boxable_forms
@@ -92,10 +107,8 @@ class GameData:
         self.data = save.box_data
         self.other_saves_data = {}
         self._load_other_save_data(save, self.save_path.stem, main_save=True)
-        for other_save_path in self.other_saves_paths:
-            self._load_other_save_data(
-                PKHeXWrapper(other_save_path), other_save_path.stem
-            )
+        for save_name, other_save in other_saves.items():
+            self._load_other_save_data(other_save, save_name)
 
         for attr in dir(self):
             if isinstance(getattr(type(self), attr, None), functools.cached_property):
@@ -107,7 +120,7 @@ class GameData:
         self.timestamp = int(time.time())
 
     def _load_other_save_data(
-        self, save: PKHeXWrapper, name: str, *, main_save: bool = False
+        self, save: game_info.GameInfo, name: str, *, main_save: bool = False
     ) -> None:
         for pokemon in itertools.chain(save.party_data, *save.box_data):
             if pokemon and pokemon not in self.other_saves_data:
@@ -117,3 +130,13 @@ class GameData:
                 if not main_save:
                     pokemon_location = f"{name} ({pokemon_location})"
                 self.other_saves_data[pokemon] = pokemon_location
+
+    def _load_game_info(
+        self,
+    ) -> tuple[game_info.GameInfo, dict[str, game_info.GameInfo]]:
+        save = game_info.load(self.save_path, self.skipped_pokemon)
+        other_saves = {
+            other_save_path.stem: game_info.load(other_save_path, self.skipped_pokemon)
+            for other_save_path in self.other_saves_paths
+        }
+        return save, other_saves

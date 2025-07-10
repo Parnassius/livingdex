@@ -1,7 +1,6 @@
 import asyncio
 import tomllib
 import weakref
-from functools import partial
 from pathlib import Path
 
 import aiohttp_jinja2
@@ -15,19 +14,25 @@ from livingdex.game_data import GameData
 from livingdex.routes import routes, send_sse_updates
 
 
-async def setup_file_watches(app: web.Application, *, data_path: Path) -> None:
+async def setup_file_watches(app: web.Application) -> None:
     async def _setup_file_watches() -> None:
-        async for changes in watchfiles.awatch(data_path):
+        games = app[app_keys.games].values()
+        paths = set()
+        for game in games:
+            paths.add(game.save_path)
+            paths.update(game.other_saves_paths)
+        async for changes in watchfiles.awatch(*paths, recursive=False):
             changed_files = {x[1] for x in changes}
             async with asyncio.TaskGroup() as tg:
-                for game in app[app_keys.games].values():
+                for game in games:
                     for file in changed_files:
+                        file_path = Path(file).resolve()
                         try:
                             if any(
-                                x.samefile(file)
+                                file_path.is_relative_to(x)
                                 for x in (game.save_path, *game.other_saves_paths)
                             ):
-                                game.load_data()
+                                await game.load_data()
                                 tg.create_task(send_sse_updates(app, game))
                                 break
                         except OSError:
@@ -67,6 +72,7 @@ def main() -> None:
     data_path = Path(__file__).parent.parent.parent
     if data_path_ := env.str("DATA_PATH", default=""):
         data_path = Path(data_path_)
+    data_path = data_path.resolve()
 
     app = web.Application()
 
@@ -82,7 +88,7 @@ def main() -> None:
             for k, v in tomllib.load(f).items()
         }
 
-    app.on_startup.append(partial(setup_file_watches, data_path=data_path))
+    app.on_startup.append(setup_file_watches)
 
     app.on_response_prepare.append(add_headers)
 

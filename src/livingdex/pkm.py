@@ -1,24 +1,24 @@
 import copy
 from collections.abc import Iterable, Sequence
-from typing import TYPE_CHECKING, Self
+from typing import TYPE_CHECKING, Any, Self
 
-from livingdex.pkhex.core import PKHeX
+from livingdex.pkhex import PKHeX
 
 if TYPE_CHECKING:
-    from livingdex.pkhex import PKHeXWrapper
+    from livingdex.game_info import GameInfo
 
 
 class PKM:
     def __init__(
         self,
-        save: "PKHeXWrapper",
+        game_info: "GameInfo",
         species: int,
         form: int,
         form_argument: int = 0,
         is_egg: bool = False,
         box_id: int | None = None,
     ) -> None:
-        self.save = save
+        self.game_info = game_info
 
         self.species = species
         self._form = form
@@ -28,17 +28,28 @@ class PKM:
         self.box_id = box_id
 
     @classmethod
-    def from_pkhex(
-        cls, save: "PKHeXWrapper", pkm: PKHeX.Core.PKM, box_id: int | None = None
+    def from_pkhex(  # type: ignore[no-any-unimported]
+        cls, game_info: "GameInfo", pkm: PKHeX.Core.PKM, box_id: int | None = None
     ) -> Self:
         return cls(
-            save,
+            game_info,
             pkm.Species,
             pkm.Form,
             pkm.FormArgument if isinstance(pkm, PKHeX.Core.IFormArgument) else 0,
             pkm.IsEgg,
             box_id=box_id,
         )
+
+    def to_dict(self) -> dict[str, Any] | None:
+        if self.species == 0:
+            return None
+        return {
+            "species": self.species,
+            "form": self._form,
+            "form_argument": self._form_argument,
+            "is_egg": self.is_egg,
+            "box_id": self.box_id,
+        }
 
     @property
     def form(self) -> int:
@@ -61,7 +72,7 @@ class PKM:
 
     @property
     def species_name(self) -> str:
-        return PKHeX.Core.GameInfo.Strings.Species[self.species]
+        return PKHeX.Core.GameInfo.Strings.Species[self.species]  # type: ignore[no-any-return]
 
     @property
     def form_name(self) -> str:
@@ -74,7 +85,7 @@ class PKM:
     def only_form(self) -> bool:
         return not any(
             x.species == self.species and x.form != self.form
-            for box in self.save.boxable_forms
+            for box in self.game_info.boxable_forms
             for x in box
         )
 
@@ -92,10 +103,10 @@ class PKM:
             PKHeX.Core.Species.Koraidon,  # Builds
             PKHeX.Core.Species.Miraidon,  # Modes
         ]
-        if self.save.save_file.Generation == 3:
+        if self.game_info.generation == 3:
             # Only one form is available, depending on the game being played
             ignored_species.append(PKHeX.Core.Species.Deoxys)
-        if self.save.save_file.Generation <= 6:
+        if self.game_info.generation <= 6:
             # Alternate forms revert to the default one when deposited in the PC
             ignored_species.extend(
                 [
@@ -108,53 +119,34 @@ class PKM:
 
     def is_form_valid(self, form: int) -> bool:
         if (
-            not self.save.save_file.Personal.IsPresentInGame(self.species, form)
+            not self.game_info.personal.IsPresentInGame(self.species, form)
             or PKHeX.Core.FormInfo.IsBattleOnlyForm(
-                self.species, form, self.save.save_file.Generation
+                self.species, form, self.game_info.generation
             )
             or PKHeX.Core.FormInfo.IsUntradable(
-                self.species, form, 0, self.save.save_file.Generation
+                self.species, form, 0, self.game_info.generation
             )
             or PKHeX.Core.FormInfo.IsTotemForm(
-                self.species, form, self.save.save_file.Context
+                self.species, form, self.game_info.context
             )
             or PKHeX.Core.FormInfo.IsLordForm(
-                self.species, form, self.save.save_file.Context
+                self.species, form, self.game_info.context
             )
         ):
             return False
 
         species = PKHeX.Core.Species(self.species)
-        if species == PKHeX.Core.Species.Floette and form == 5:
-            # Floette Eternal Flower, never released
-            return False
-        if species == PKHeX.Core.Species.Zygarde and form in (2, 3):
-            # Power Construct forms, they are aliased to the Aura Break ones
-            return False
-        if (
-            species == PKHeX.Core.Species.Magearna
-            and form == 1
-            and self.save.save_file.Generation <= 7
-        ):
+        skipped_pokemon = [
+            *self.game_info.skipped_pokemon,
+            (PKHeX.Core.Species.Floette, 5),  # Floette Eternal Flower, never released
+            (PKHeX.Core.Species.Zygarde, 2),  # Power Construct forms, they are aliased
+            (PKHeX.Core.Species.Zygarde, 3),  # to the Aura Break ones
+        ]
+        if self.game_info.generation <= 7:
             # Magearna Original Color, unreleased before Generation 8
-            return False
+            skipped_pokemon.append((PKHeX.Core.Species.Magearna, 1))
 
-        transfer_only_species = []
-        if self.save.save_file.Context == PKHeX.Core.EntityContext.Gen8:
-            transfer_only_species = [
-                PKHeX.Core.Species.Diancie,
-                PKHeX.Core.Species.Magearna,
-                PKHeX.Core.Species.Zeraora,
-                PKHeX.Core.Species.Meltan,
-                PKHeX.Core.Species.Melmetal,
-            ]
-        elif self.save.save_file.Context == PKHeX.Core.EntityContext.Gen8b:
-            transfer_only_species = [
-                PKHeX.Core.Species.Celebi,
-                PKHeX.Core.Species.Deoxys,
-            ]
-
-        if species in transfer_only_species:
+        if (species, form) in skipped_pokemon:
             return False
 
         return True
@@ -162,12 +154,12 @@ class PKM:
     @property
     def all_forms(self) -> Sequence[str]:
         strings = PKHeX.Core.GameInfo.Strings
-        return PKHeX.Core.FormConverter.GetFormList(
+        return PKHeX.Core.FormConverter.GetFormList(  # type: ignore[no-any-return]
             self.species,
             strings.Types,
             strings.forms,
             PKHeX.Core.GameInfo.GenderSymbolUnicode,
-            self.save.save_file.Context,
+            self.game_info.context,
         )
 
     @property
@@ -177,7 +169,7 @@ class PKM:
         if PKHeX.Core.Species(self.species) == PKHeX.Core.Species.Alcremie:
             for form_argument in range(
                 PKHeX.Core.FormArgumentUtil.GetFormArgumentMax(
-                    self.species, self.form, self.save.save_file.Context
+                    self.species, self.form, self.game_info.context
                 )
             ):
                 new_form = copy.copy(self)
@@ -185,12 +177,12 @@ class PKM:
                 yield new_form
 
     def dex_order(self, dex_attribute: str) -> tuple[int, int]:
-        info = self.save.save_file.Personal[self.species, self.form]
+        info = self.game_info.personal[self.species, self.form]
 
         is_local = False
         if info.IsRegionalForm:
             is_local = info.RegionalFormIndex == info.LocalFormIndex
-        elif self.save.save_file.Context == PKHeX.Core.EntityContext.Gen8:
+        elif self.game_info.context == PKHeX.Core.EntityContext.Gen8:
             is_local = (
                 # Some regional forms don't have the IsRegionalForm flag set
                 (PKHeX.Core.Species(self.species), self.form)
@@ -202,7 +194,7 @@ class PKM:
                     (PKHeX.Core.Species.Moltres, 1),
                 ]
             )
-        elif self.save.save_file.Context == PKHeX.Core.EntityContext.Gen8a:
+        elif self.game_info.context == PKHeX.Core.EntityContext.Gen8a:
             is_local = (
                 # Sneasel is the only Pokemon with more than one regional form
                 PKHeX.Core.Species(self.species) == PKHeX.Core.Species.Sneasel
@@ -214,9 +206,9 @@ class PKM:
     def evolves_from(self, other: "PKM") -> bool:
         if other.is_egg:
             return False
-        tree = PKHeX.Core.EvolutionTree.GetEvolutionTree(self.save.save_file.Context)
+        tree = PKHeX.Core.EvolutionTree.GetEvolutionTree(self.game_info.context)
         return any(
-            PKM(self.save, pre.Item1, pre.Item2) == other
+            PKM(self.game_info, pre.Item1, pre.Item2) == other
             for pre in tree.Reverse.GetPreEvolutions(self.species, self.form)
         )
 
@@ -234,7 +226,7 @@ class PKM:
         cls = type(self)
         return (
             f"{cls.__module__}.{cls.__qualname__}"
-            f"({self.save!r}, {self.species!r}, {self.form!r}, {self.is_egg!r})"
+            f"({self.game_info!r}, {self.species!r}, {self.form!r}, {self.is_egg!r})"
         )
 
     def __bool__(self) -> bool:
@@ -256,15 +248,15 @@ class PKM:
 
 
 class LGPEStarterPKM(PKM):
-    def __init__(self, save: "PKHeXWrapper") -> None:
-        super().__init__(save, 0, 0)
+    def __init__(self, game_info: "GameInfo") -> None:
+        super().__init__(game_info, 0, 0)
 
     def __str__(self) -> str:
         return "Starter"
 
     def __repr__(self) -> str:
         cls = type(self)
-        return f"{cls.__module__}.{cls.__qualname__}({self.save!r})"
+        return f"{cls.__module__}.{cls.__qualname__}({self.game_info!r})"
 
     def __bool__(self) -> bool:
         return True

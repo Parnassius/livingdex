@@ -6,6 +6,7 @@ dependencies = [
     "aiohttp==3.12.13",
     "aiohttp-jinja2==1.6",
     "aiohttp-sse==2.2.0",
+    "pillow==11.3.0",
     "pythonnet==3.0.5",
     "typenv==0.2.0",
     "watchfiles==1.1.0",
@@ -37,11 +38,6 @@ disallow_any_decorated = true
 #disallow_any_explicit = true
 
 warn_unreachable = true
-
-[[tool.mypy.overrides]]
-module = "livingdex.pkhex.*"
-disallow_any_unimported = false
-warn_return_any = false
 
 
 [tool.pytest.ini_options]

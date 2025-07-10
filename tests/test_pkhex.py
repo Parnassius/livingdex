@@ -1,4 +1,4 @@
-from livingdex.pkhex.core import PKHeX
+from livingdex.pkhex import PKHeX
 
 
 def test_pkhex() -> None:

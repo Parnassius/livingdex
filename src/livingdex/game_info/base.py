@@ -1,0 +1,315 @@
+import functools
+import hashlib
+import itertools
+import json
+import math
+from abc import abstractmethod
+from pathlib import Path
+
+from PIL import Image, ImageDraw
+
+from livingdex.hash_image import ImageHash, dhash
+from livingdex.pkhex import PKHeX
+from livingdex.pkm import PKM, LGPEStarterPKM
+
+
+class GameInfo:
+    def __init__(  # type: ignore[no-any-unimported]
+        self, game_path: Path, skipped_pokemon: list[tuple[PKHeX.Core.Species, int]]
+    ) -> None:
+        self._game_path = game_path
+        self.skipped_pokemon = skipped_pokemon
+        self._empty_slot = PKM(self, 0, 0)
+        self._save_file = self._load_save_file()
+
+    @abstractmethod
+    def _load_save_file(self) -> PKHeX.Core.SaveFile: ...  # type: ignore[no-any-unimported]
+
+    @property
+    def generation(self) -> int:
+        return self._save_file.Generation  # type: ignore[no-any-return]
+
+    @property
+    def context(self) -> PKHeX.Core.EntityContext:  # type: ignore[no-any-unimported]
+        return self._save_file.Context
+
+    @property
+    def personal(self) -> PKHeX.Core.IPersonalTable:  # type: ignore[no-any-unimported]
+        return self._save_file.Personal
+
+    @property
+    @abstractmethod
+    def box_slot_count(self) -> int: ...
+
+    @functools.cached_property
+    @abstractmethod
+    def party_data(self) -> list[PKM]: ...
+
+    @functools.cached_property
+    @abstractmethod
+    def box_data(self) -> list[list[PKM]]: ...
+
+    @functools.cached_property
+    def boxable_forms(self) -> list[list[PKM]]:
+        data: list[PKM] = []
+        personal = self._save_file.Personal
+
+        if isinstance(self._save_file, PKHeX.Core.SAV7b):
+            data.append(LGPEStarterPKM(self))
+
+        for species in range(1, personal.MaxSpeciesID + 1):
+            if not personal.IsSpeciesInGame(species):
+                continue
+            form0 = PKM(self, species, 0)
+            if form0.is_form_valid(0):
+                data.extend(form0.forms_with_arguments)
+            for form in range(1, len(form0.all_forms)):
+                if form0.is_form_valid(form) and not form0.ignore_alternate_forms:
+                    data.extend(PKM(self, species, form).forms_with_arguments)
+
+        sections = {
+            PKHeX.Core.SAV8SWSH: ["PokeDexIndex", "ArmorDexIndex", "CrownDexIndex"],
+            PKHeX.Core.SAV8LA: ["DexIndexHisui"],
+            PKHeX.Core.SAV9SV: ["DexPaldea", "DexKitakami", "DexBlueberry"],
+        }
+
+        if type(self._save_file) in sections:
+            dexes = sections[type(self._save_file)]
+            data_regional_dexes: dict[str, list[PKM]] = {dex: [] for dex in dexes}
+            data_other = []
+            for pkm in data:
+                for dex in dexes:
+                    if getattr(personal[pkm.species, pkm.form], dex, None):
+                        data_regional_dexes[dex].append(pkm)
+                        break
+                else:
+                    data_other.append(pkm)
+
+            total_boxes = sum(
+                math.ceil(len(data) / self.box_slot_count)
+                for data in (*data_regional_dexes.values(), data_other)
+            )
+            data = []
+            for dex in dexes:
+                data_regional_dexes[dex].sort(key=lambda x: x.dex_order(dex))
+                data.extend(data_regional_dexes[dex])
+                if total_boxes > self.box_slot_count:
+                    empty_slots = 6 - len(data) % 6
+                else:
+                    empty_slots = self.box_slot_count - len(data) % self.box_slot_count
+                if empty_slots:
+                    data.extend([self._empty_slot] * empty_slots)
+            data.extend(data_other)
+
+        if filled_slots := len(data) % self.box_slot_count:
+            data.extend([self._empty_slot] * (self.box_slot_count - filled_slots))
+
+        if isinstance(self._save_file, PKHeX.Core.SAV7b):
+            return [data]
+
+        return [
+            list(x) for x in itertools.batched(data, self.box_slot_count, strict=False)
+        ]
+
+
+class PKHeXGameInfo(GameInfo):
+    def _load_save_file(self) -> PKHeX.Core.SaveFile:  # type: ignore[no-any-unimported]
+        return PKHeX.Core.SaveUtil.GetVariantSAV(str(self._game_path))
+
+    @property
+    def box_slot_count(self) -> int:
+        if isinstance(self._save_file, PKHeX.Core.SAV7b):
+            return 6  # Single box with 6 columns
+
+        return self._save_file.BoxSlotCount  # type: ignore[no-any-return]
+
+    @functools.cached_property
+    def party_data(self) -> list[PKM]:
+        return [PKM.from_pkhex(self, pkm) for pkm in self._save_file.PartyData]
+
+    @functools.cached_property
+    def box_data(self) -> list[list[PKM]]:
+        data = [
+            [
+                PKM.from_pkhex(self, pkm, box_id)
+                for pkm in self._save_file.GetBoxData(box_id)
+            ]
+            for box_id in range(self._save_file.BoxCount)
+        ]
+
+        if isinstance(self._save_file, PKHeX.Core.SAV7b):
+            data = [[x for box in data for x in box]]
+
+        return data
+
+
+class ScreenshotsGameInfo(GameInfo):
+    game_version: PKHeX.Core.GameVersion  # type: ignore[no-any-unimported]
+
+    box_rows = 5
+    box_cols = 6
+    box_count: int
+
+    box_first_sprite_coords: tuple[int, int, int, int]
+    box_sprites_offset_x: int
+    box_sprites_offset_y: int
+
+    box_hash_sprite_max_distance = 8
+
+    def __init__(  # type: ignore[no-any-unimported]
+        self, game_path: Path, skipped_pokemon: list[tuple[PKHeX.Core.Species, int]]
+    ) -> None:
+        self._cache_path = game_path / "cache"
+        self._box_sprites_path = game_path / "box_sprites"
+        self._unnamed_box_sprites_path = self._box_sprites_path / "unnamed"
+
+        self._cache_path.mkdir(parents=True, exist_ok=True)
+        self._unnamed_box_sprites_path.mkdir(parents=True, exist_ok=True)
+
+        super().__init__(game_path, skipped_pokemon)
+
+    def _load_save_file(self) -> PKHeX.Core.SaveFile:  # type: ignore[no-any-unimported]
+        return PKHeX.Core.SaveUtil.GetBlankSAV(self.game_version, "")
+
+    @property
+    def box_slot_count(self) -> int:
+        return self.box_rows * self.box_cols
+
+    @functools.cached_property
+    def _sprite_hashes(self) -> dict[PKM, ImageHash]:
+        data = {}
+        for f in self._box_sprites_path.glob("*.png"):
+            if f.stem == "egg":
+                species = 0
+                form = 0
+                form_argument = 0
+                is_egg = True
+            else:
+                parts = f.stem.split("_")
+                try:
+                    species = next(
+                        i
+                        for i, x in enumerate(PKHeX.Core.GameInfo.Strings.Species)
+                        if x == parts[0]
+                    )
+                except StopIteration:
+                    f.unlink()
+                    continue
+                form = int(parts[1]) if len(parts) >= 2 else 0
+                form_argument = int(parts[2]) if len(parts) >= 3 else 0
+                is_egg = False
+            pkm = PKM(self, species, form, form_argument, is_egg)
+
+            with Image.open(f) as im:
+                data[pkm] = dhash(im)
+
+        return data
+
+    @functools.cached_property
+    def party_data(self) -> list[PKM]:
+        return []
+
+    @functools.cached_property
+    def box_data(self) -> list[list[PKM]]:
+        data = []
+        for box_id in range(self.box_count):
+            screenshot_path = self._game_path / f"{box_id + 1}.jpg"
+            if not screenshot_path.is_file():
+                data.append([self._empty_slot] * self.box_slot_count)
+                continue
+
+            with screenshot_path.open("rb") as f:
+                digest = hashlib.file_digest(f, "sha256").hexdigest()
+
+            json_cache_path = self._cache_path / f"{box_id + 1}.json"
+            try:
+                with json_cache_path.open("r", encoding="utf-8") as f:
+                    cache = json.load(f)
+            except (FileNotFoundError, json.JSONDecodeError):
+                pass
+            else:
+                if digest == cache["digest"]:
+                    data.append(
+                        [
+                            self._empty_slot if params is None else PKM(self, **params)
+                            for params in cache["data"]
+                        ]
+                    )
+                    continue
+
+            with Image.open(screenshot_path) as im:
+                parsed_box_data = self._parse_box_data(im, box_id)
+
+            data.append(parsed_box_data)
+            cache = {
+                "digest": digest,
+                "data": [pkm.to_dict() for pkm in parsed_box_data],
+            }
+            with json_cache_path.open("w", encoding="utf-8") as f:
+                json.dump(cache, f)
+
+        return data
+
+    def _parse_box_data(self, im: Image.Image, box_id: int) -> list[PKM]:
+        data = []
+
+        x1, y1, x2, y2 = self.box_first_sprite_coords
+        for row in range(self.box_rows):
+            offset_y = self.box_sprites_offset_y * row
+            for col in range(self.box_cols):
+                offset_x = self.box_sprites_offset_x * col
+                coords = (
+                    x1 + offset_x,
+                    y1 + offset_y,
+                    x2 + offset_x,
+                    y2 + offset_y,
+                )
+                im_cropped = im.crop(coords).convert("RGBA")
+                ImageDraw.floodfill(im_cropped, (5, 5), (0, 0, 0, 0), thresh=64)
+
+                data.append(
+                    self._parse_box_sprite(
+                        im_cropped, box_id, row * self.box_cols + col
+                    )
+                )
+
+        return data
+
+    def _parse_box_sprite(self, im: Image.Image, box_id: int, slot_id: int) -> PKM:
+        opaque_pixels = sum(
+            1 for alpha in list(im.getchannel("A").getdata()) if alpha == 255
+        )
+        if opaque_pixels < im.width * im.height * 0.05:
+            return self._empty_slot
+
+        image_hash = dhash(im)
+        try:
+            expected_pkm = self.boxable_forms[box_id][slot_id]
+        except IndexError:
+            expected_pkm = self._empty_slot
+
+        if (
+            expected_pkm in self._sprite_hashes
+            and image_hash - self._sprite_hashes[expected_pkm]
+            < self.box_hash_sprite_max_distance
+        ):
+            return expected_pkm
+
+        matching_pkm = {
+            pkm: image_hash - hash_
+            for pkm, hash_ in self._sprite_hashes.items()
+            if image_hash - hash_ <= self.box_hash_sprite_max_distance
+        }
+        if matching_pkm:
+            best_match_pkm, best_match_distance = min(
+                matching_pkm.items(), key=lambda x: x[1]
+            )
+            if (
+                expected_pkm in matching_pkm
+                and matching_pkm[expected_pkm] < best_match_distance * 2
+            ):
+                return expected_pkm
+            return best_match_pkm
+
+        im.save(self._unnamed_box_sprites_path / f"{image_hash}.png")
+        return self._empty_slot
