@@ -16,7 +16,6 @@ class PKM:
         form: int,
         form_argument: int = 0,
         is_egg: bool = False,
-        box_id: int | None = None,
     ) -> None:
         self.game_info = game_info
 
@@ -25,11 +24,9 @@ class PKM:
         self._form_argument = form_argument
         self.is_egg = is_egg
 
-        self.box_id = box_id
-
     @classmethod
     def from_pkhex(  # type: ignore[no-any-unimported]
-        cls, game_info: "GameInfo", pkm: PKHeX.Core.PKM, box_id: int | None = None
+        cls, game_info: "GameInfo", pkm: PKHeX.Core.PKM
     ) -> Self:
         return cls(
             game_info,
@@ -37,7 +34,6 @@ class PKM:
             pkm.Form,
             pkm.FormArgument if isinstance(pkm, PKHeX.Core.IFormArgument) else 0,
             pkm.IsEgg,
-            box_id=box_id,
         )
 
     def to_dict(self) -> dict[str, Any] | None:
@@ -48,7 +44,6 @@ class PKM:
             "form": self._form,
             "form_argument": self._form_argument,
             "is_egg": self.is_egg,
-            "box_id": self.box_id,
         }
 
     @property

@@ -1,6 +1,5 @@
 import asyncio
 import functools
-import itertools
 import json
 import time
 from pathlib import Path
@@ -122,14 +121,13 @@ class GameData:
     def _load_other_save_data(
         self, save: game_info.GameInfo, name: str, *, main_save: bool = False
     ) -> None:
-        for pokemon in itertools.chain(save.party_data, *save.box_data):
-            if pokemon and pokemon not in self.other_saves_data:
-                pokemon_location = (
-                    "Party" if pokemon.box_id is None else f"Box {pokemon.box_id + 1}"
-                )
-                if not main_save:
-                    pokemon_location = f"{name} ({pokemon_location})"
-                self.other_saves_data[pokemon] = pokemon_location
+        for box_number, box_data in enumerate((save.party_data, *save.box_data)):
+            pokemon_location = "Party" if box_number == 0 else f"Box {box_number}"
+            for pokemon in box_data:
+                if pokemon and pokemon not in self.other_saves_data:
+                    if not main_save:
+                        pokemon_location = f"{name} ({pokemon_location})"
+                    self.other_saves_data[pokemon] = pokemon_location
 
     def _load_game_info(
         self,

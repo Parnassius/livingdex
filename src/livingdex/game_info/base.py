@@ -130,10 +130,7 @@ class PKHeXGameInfo(GameInfo):
     @functools.cached_property
     def box_data(self) -> list[list[PKM]]:
         data = [
-            [
-                PKM.from_pkhex(self, pkm, box_id)
-                for pkm in self._save_file.GetBoxData(box_id)
-            ]
+            [PKM.from_pkhex(self, pkm) for pkm in self._save_file.GetBoxData(box_id)]
             for box_id in range(self._save_file.BoxCount)
         ]
 
