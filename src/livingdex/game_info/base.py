@@ -151,16 +151,18 @@ class ScreenshotsGameInfo(GameInfo):
     box_sprites_offset_x: int
     box_sprites_offset_y: int
 
-    box_hash_sprite_max_distance = 8
+    box_hash_sprite_max_distance = 4
 
     def __init__(  # type: ignore[no-any-unimported]
         self, game_path: Path, skipped_pokemon: list[tuple[PKHeX.Core.Species, int]]
     ) -> None:
         self._cache_path = game_path / "cache"
         self._box_sprites_path = game_path / "box_sprites"
+        self._numbered_box_sprites_path = self._box_sprites_path / "numbered"
         self._unnamed_box_sprites_path = self._box_sprites_path / "unnamed"
 
         self._cache_path.mkdir(parents=True, exist_ok=True)
+        self._numbered_box_sprites_path.mkdir(parents=True, exist_ok=True)
         self._unnamed_box_sprites_path.mkdir(parents=True, exist_ok=True)
 
         super().__init__(game_path, skipped_pokemon)
@@ -273,6 +275,8 @@ class ScreenshotsGameInfo(GameInfo):
         return data
 
     def _parse_box_sprite(self, im: Image.Image, box_id: int, slot_id: int) -> PKM:
+        im.save(self._numbered_box_sprites_path / f"{box_id + 1}-{slot_id + 1}.png")
+
         opaque_pixels = sum(
             1 for alpha in list(im.getchannel("A").getdata()) if alpha == 255
         )
