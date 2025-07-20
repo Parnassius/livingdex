@@ -65,29 +65,30 @@ class GameData:
         for box_id, box in enumerate(self.expected):
             box_data = []
             for pokemon_id, pokemon in enumerate(box):
-                if not pokemon:
-                    continue
-                data_pokemon = self.data[box_id][pokemon_id]
-                if (
-                    len(self.data) > box_id
-                    and len(self.data[box_id]) > pokemon_id
-                    and data_pokemon
-                ):
-                    if pokemon == data_pokemon:
-                        box_data.append("caught")
-                    elif pokemon.evolves_from(data_pokemon):
-                        box_data.append(f"evo|{data_pokemon}")
+                if pokemon:
+                    data_pokemon = self.data[box_id][pokemon_id]
+                    if (
+                        len(self.data) > box_id
+                        and len(self.data[box_id]) > pokemon_id
+                        and data_pokemon
+                    ):
+                        if pokemon == data_pokemon:
+                            box_data.append("caught")
+                        elif pokemon.evolves_from(data_pokemon):
+                            box_data.append(f"evo|{data_pokemon}")
+                        elif pokemon in self.other_saves_data:
+                            box_data.append(
+                                "wrong-and-other-game|"
+                                f"{data_pokemon} / {self.other_saves_data[pokemon]}"
+                            )
+                        else:
+                            box_data.append(f"wrong|{data_pokemon}")
                     elif pokemon in self.other_saves_data:
-                        box_data.append(
-                            "wrong-and-other-game|"
-                            f"{data_pokemon} / {self.other_saves_data[pokemon]}"
-                        )
+                        box_data.append(f"other-game|{self.other_saves_data[pokemon]}")
                     else:
-                        box_data.append(f"wrong|{data_pokemon}")
-                elif pokemon in self.other_saves_data:
-                    box_data.append(f"other-game|{self.other_saves_data[pokemon]}")
+                        box_data.append("missing")
                 else:
-                    box_data.append("missing")
+                    box_data.append("filler")
             data.append(box_data)
 
         return json.dumps(data)
