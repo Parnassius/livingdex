@@ -22,6 +22,7 @@ class GameData:
         self.game_id = game_id
         self.name = name
 
+        self.base_path = base_path
         self.save_path = (base_path / save).resolve()
         if other_saves is None:
             self.other_saves_paths = []
@@ -133,9 +134,11 @@ class GameData:
     def _load_game_info(
         self,
     ) -> tuple[game_info.GameInfo, dict[str, game_info.GameInfo]]:
-        save = game_info.load(self.save_path, self.skipped_pokemon)
+        save = game_info.load(self.base_path, self.save_path, self.skipped_pokemon)
         other_saves = {
-            other_save_path.stem: game_info.load(other_save_path, self.skipped_pokemon)
+            other_save_path.stem: game_info.load(
+                self.base_path, other_save_path, self.skipped_pokemon
+            )
             for other_save_path in self.other_saves_paths
         }
         return save, other_saves

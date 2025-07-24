@@ -6,17 +6,20 @@ import math
 from abc import abstractmethod
 from pathlib import Path
 
-from PIL import Image, ImageDraw
+from PIL import Image, ImageChops
 
-from livingdex.hash_image import ImageHash, dhash
 from livingdex.pkhex import PKHeX
 from livingdex.pkm import PKM, LGPEStarterPKM
 
 
 class GameInfo:
     def __init__(  # type: ignore[no-any-unimported]
-        self, game_path: Path, skipped_pokemon: list[tuple[PKHeX.Core.Species, int]]
+        self,
+        base_path: Path,
+        game_path: Path,
+        skipped_pokemon: list[tuple[PKHeX.Core.Species, int]],
     ) -> None:
+        self._base_path = base_path
         self._game_path = game_path
         self.skipped_pokemon = skipped_pokemon
         self._empty_slot = PKM(self, 0, 0)
@@ -141,31 +144,37 @@ class PKHeXGameInfo(GameInfo):
 
 
 class ScreenshotsGameInfo(GameInfo):
-    game_version: PKHeX.Core.GameVersion  # type: ignore[no-any-unimported]
-
     box_rows = 5
     box_cols = 6
-    box_count: int
 
-    box_first_sprite_coords: tuple[int, int, int, int]
-    box_sprites_offset_x: int
-    box_sprites_offset_y: int
+    box_first_sprite_coords = (684, 128, 760, 204)
+    box_sprites_offset_x = 92
+    box_sprites_offset_y = 76
 
-    box_hash_sprite_max_distance = 4
+    box_sprite_max_distance = 3072
 
     def __init__(  # type: ignore[no-any-unimported]
-        self, game_path: Path, skipped_pokemon: list[tuple[PKHeX.Core.Species, int]]
+        self,
+        base_path: Path,
+        game_path: Path,
+        skipped_pokemon: list[tuple[PKHeX.Core.Species, int]],
+        *,
+        game_version: PKHeX.Core.GameVersion,
+        box_count: int,
     ) -> None:
+        self.game_version = game_version
+        self.box_count = box_count
+
         self._cache_path = game_path / "cache"
-        self._box_sprites_path = game_path / "box_sprites"
-        self._numbered_box_sprites_path = self._box_sprites_path / "numbered"
+        self._game_box_sprites_path = game_path / "box_sprites"
+        self._box_sprites_path = base_path / "box_sprites"
         self._unnamed_box_sprites_path = self._box_sprites_path / "unnamed"
 
         self._cache_path.mkdir(parents=True, exist_ok=True)
-        self._numbered_box_sprites_path.mkdir(parents=True, exist_ok=True)
+        self._game_box_sprites_path.mkdir(parents=True, exist_ok=True)
         self._unnamed_box_sprites_path.mkdir(parents=True, exist_ok=True)
 
-        super().__init__(game_path, skipped_pokemon)
+        super().__init__(base_path, game_path, skipped_pokemon)
 
     def _load_save_file(self) -> PKHeX.Core.SaveFile:  # type: ignore[no-any-unimported]
         return PKHeX.Core.SaveUtil.GetBlankSAV(self.game_version, "")
@@ -175,10 +184,15 @@ class ScreenshotsGameInfo(GameInfo):
         return self.box_rows * self.box_cols
 
     @functools.cached_property
-    def _sprite_hashes(self) -> dict[PKM, ImageHash]:
+    def _sprites(self) -> dict[PKM, Image.Image]:
         data = {}
         for f in self._box_sprites_path.glob("*.png"):
-            if f.stem == "egg":
+            if f.stem == "empty":
+                species = 0
+                form = 0
+                form_argument = 0
+                is_egg = False
+            elif f.stem == "egg":
                 species = 0
                 form = 0
                 form_argument = 0
@@ -200,9 +214,16 @@ class ScreenshotsGameInfo(GameInfo):
             pkm = PKM(self, species, form, form_argument, is_egg)
 
             with Image.open(f) as im:
-                data[pkm] = dhash(im)
+                im.load()
+                data[pkm] = im
 
         return data
+
+    def _get_sprite_distance(self, im: Image.Image, im2: Image.Image) -> int:
+        return sum(
+            r // 8 + g // 8 + b // 8
+            for r, g, b in list(ImageChops.difference(im, im2).getdata())
+        )
 
     @functools.cached_property
     def party_data(self) -> list[PKM]:
@@ -218,7 +239,10 @@ class ScreenshotsGameInfo(GameInfo):
                 continue
 
             with screenshot_path.open("rb") as f:
-                digest = hashlib.file_digest(f, "sha256").hexdigest()
+                h = hashlib.file_digest(f, "sha256")
+            box_sprites = sorted(x.stem for x in self._box_sprites_path.glob("*.png"))
+            h.update(":".join(box_sprites).encode())
+            digest = h.hexdigest()
 
             json_cache_path = self._cache_path / f"{box_id + 1}.json"
             try:
@@ -263,44 +287,34 @@ class ScreenshotsGameInfo(GameInfo):
                     x2 + offset_x,
                     y2 + offset_y,
                 )
-                im_cropped = im.crop(coords).convert("RGBA")
-                ImageDraw.floodfill(im_cropped, (5, 5), (0, 0, 0, 0), thresh=64)
-
                 data.append(
                     self._parse_box_sprite(
-                        im_cropped, box_id, row * self.box_cols + col
+                        im.crop(coords), box_id, row * self.box_cols + col
                     )
                 )
 
         return data
 
     def _parse_box_sprite(self, im: Image.Image, box_id: int, slot_id: int) -> PKM:
-        im.save(self._numbered_box_sprites_path / f"{box_id + 1}-{slot_id + 1}.png")
+        im.save(self._game_box_sprites_path / f"{box_id + 1}-{slot_id + 1}.png")
 
-        opaque_pixels = sum(
-            1 for alpha in list(im.getchannel("A").getdata()) if alpha == 255
-        )
-        if opaque_pixels < im.width * im.height * 0.05:
-            return self._empty_slot
-
-        image_hash = dhash(im)
         try:
             expected_pkm = self.boxable_forms[box_id][slot_id]
         except IndexError:
             expected_pkm = self._empty_slot
 
         if (
-            expected_pkm in self._sprite_hashes
-            and image_hash - self._sprite_hashes[expected_pkm]
-            < self.box_hash_sprite_max_distance
+            expected_pkm in self._sprites
+            and self._get_sprite_distance(im, self._sprites[expected_pkm])
+            < self.box_sprite_max_distance
         ):
             return expected_pkm
 
-        matching_pkm = {
-            pkm: image_hash - hash_
-            for pkm, hash_ in self._sprite_hashes.items()
-            if image_hash - hash_ <= self.box_hash_sprite_max_distance
-        }
+        matching_pkm = {}
+        for pkm, pkm_im in self._sprites.items():
+            distance = self._get_sprite_distance(im, pkm_im)
+            if distance < self.box_sprite_max_distance:
+                matching_pkm[pkm] = distance
         if matching_pkm:
             best_match_pkm, best_match_distance = min(
                 matching_pkm.items(), key=lambda x: x[1]
@@ -312,5 +326,39 @@ class ScreenshotsGameInfo(GameInfo):
                 return expected_pkm
             return best_match_pkm
 
-        im.save(self._unnamed_box_sprites_path / f"{image_hash}.png")
+        im.save(
+            self._unnamed_box_sprites_path
+            / f"{self._game_path.stem}-{box_id + 1}-{slot_id + 1}.png"
+        )
         return self._empty_slot
+
+
+_games: dict[str, tuple[PKHeX.Core.GameVersion, int]] = {  # type: ignore[no-any-unimported]
+    "scarlet_violet": (PKHeX.Core.GameVersion.SV, 32),
+}
+
+
+def load(  # type: ignore[no-any-unimported]
+    base_path: Path,
+    save_path: Path,
+    skipped_pokemon: list[tuple[PKHeX.Core.Species, int]],
+) -> GameInfo:
+    if save_path.is_file():
+        game_info: GameInfo = PKHeXGameInfo(base_path, save_path, skipped_pokemon)
+    else:
+        game = (save_path / "game_id").read_text()
+        game_version, box_count = _games[game.strip()]
+        game_info = ScreenshotsGameInfo(
+            base_path,
+            save_path,
+            skipped_pokemon,
+            game_version=game_version,
+            box_count=box_count,
+        )
+
+    # Pre-cache all cached properties
+    for attr in dir(game_info):
+        if isinstance(getattr(type(game_info), attr, None), functools.cached_property):
+            getattr(game_info, attr)
+
+    return game_info
