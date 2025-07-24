@@ -4,6 +4,7 @@ import itertools
 import json
 import math
 from abc import abstractmethod
+from collections import defaultdict
 from pathlib import Path
 
 from PIL import Image, ImageChops
@@ -184,8 +185,8 @@ class ScreenshotsGameInfo(GameInfo):
         return self.box_rows * self.box_cols
 
     @functools.cached_property
-    def _sprites(self) -> dict[PKM, Image.Image]:
-        data = {}
+    def _sprites(self) -> dict[PKM, list[Image.Image]]:
+        data = defaultdict(list)
         for f in self._box_sprites_path.glob("*.png"):
             if f.stem == "empty":
                 species = 0
@@ -208,6 +209,8 @@ class ScreenshotsGameInfo(GameInfo):
                 except StopIteration:
                     f.unlink()
                     continue
+                if len(parts) >= 2 and parts[1] in ("m", "f"):
+                    del parts[1]
                 form = int(parts[1]) if len(parts) >= 2 else 0
                 form_argument = int(parts[2]) if len(parts) >= 3 else 0
                 is_egg = False
@@ -215,7 +218,7 @@ class ScreenshotsGameInfo(GameInfo):
 
             with Image.open(f) as im:
                 im.load()
-                data[pkm] = im
+                data[pkm].append(im)
 
         return data
 
@@ -303,16 +306,15 @@ class ScreenshotsGameInfo(GameInfo):
         except IndexError:
             expected_pkm = self._empty_slot
 
-        if (
-            expected_pkm in self._sprites
-            and self._get_sprite_distance(im, self._sprites[expected_pkm])
-            < self.box_sprite_max_distance
+        if expected_pkm in self._sprites and any(
+            self._get_sprite_distance(im, pkm_im) < self.box_sprite_max_distance
+            for pkm_im in self._sprites[expected_pkm]
         ):
             return expected_pkm
 
         matching_pkm = {}
-        for pkm, pkm_im in self._sprites.items():
-            distance = self._get_sprite_distance(im, pkm_im)
+        for pkm, pkm_ims in self._sprites.items():
+            distance = min(self._get_sprite_distance(im, pkm_im) for pkm_im in pkm_ims)
             if distance < self.box_sprite_max_distance:
                 matching_pkm[pkm] = distance
         if matching_pkm:
