@@ -11,17 +11,26 @@ from typenv import Env
 
 from livingdex import app_keys
 from livingdex.game_data import GameData
+from livingdex.game_info import InputScreenshots
 from livingdex.routes import routes, send_sse_updates
 
 
 async def setup_file_watches(app: web.Application) -> None:
+    async def _setup_input_screenshots_watches() -> None:
+        input_path = app[app_keys.data_path] / "input_screenshots"
+        async for _ in watchfiles.awatch(input_path, recursive=False):
+            try:
+                await asyncio.to_thread(InputScreenshots(app[app_keys.data_path]).load)
+            except OSError:
+                pass
+
     async def _setup_box_sprites_watches() -> None:
         screenshots_games = [
             game
             for game in app[app_keys.games].values()
             if any(x.is_dir() for x in (game.save_path, *game.other_saves_paths))
         ]
-        box_sprites_path = app[app_keys.data_path] / "box_sprites"
+        box_sprites_path = app[app_keys.data_path] / "input_screenshots" / "box_sprites"
         async for changes in watchfiles.awatch(box_sprites_path, recursive=False):
             if any(Path(x[1]).suffix == ".png" for x in changes):
                 async with asyncio.TaskGroup() as tg:
@@ -33,7 +42,7 @@ async def setup_file_watches(app: web.Application) -> None:
                         except OSError:
                             pass
 
-    async def _setup_file_watches() -> None:
+    async def _setup_game_files_watches() -> None:
         games = app[app_keys.games].values()
         paths = set()
         for game in games:
@@ -56,10 +65,11 @@ async def setup_file_watches(app: web.Application) -> None:
                         except OSError:
                             pass
 
-    app[app_keys.watches_tasks] = (
+    app[app_keys.watches_tasks] = [
+        asyncio.create_task(_setup_input_screenshots_watches()),
         asyncio.create_task(_setup_box_sprites_watches()),
-        asyncio.create_task(_setup_file_watches()),
-    )
+        asyncio.create_task(_setup_game_files_watches()),
+    ]
 
 
 async def add_headers(
@@ -104,6 +114,7 @@ def main() -> None:
     app[aiohttp_jinja2.static_root_key] = "/static"
     app.router.add_static("/static", Path(__file__).parent / "static", name="static")
 
+    InputScreenshots(data_path).load()
     with (data_path / "games.toml").open("rb") as f:
         app[app_keys.games] = {
             k: GameData(game_id=k, **v, base_path=data_path)

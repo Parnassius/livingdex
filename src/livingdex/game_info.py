@@ -168,7 +168,7 @@ class ScreenshotsGameInfo(GameInfo):
 
         self._cache_path = game_path / "cache"
         self._game_box_sprites_path = game_path / "box_sprites"
-        self._box_sprites_path = base_path / "box_sprites"
+        self._box_sprites_path = base_path / "input_screenshots" / "box_sprites"
         self._unnamed_box_sprites_path = self._box_sprites_path / "unnamed"
 
         self._cache_path.mkdir(parents=True, exist_ok=True)
@@ -221,12 +221,6 @@ class ScreenshotsGameInfo(GameInfo):
                 data[pkm].append(im)
 
         return data
-
-    def _get_sprite_distance(self, im: Image.Image, im2: Image.Image) -> int:
-        return sum(
-            r // 8 + g // 8 + b // 8
-            for r, g, b in list(ImageChops.difference(im, im2).getdata())
-        )
 
     @functools.cached_property
     def party_data(self) -> list[PKM]:
@@ -307,14 +301,14 @@ class ScreenshotsGameInfo(GameInfo):
             expected_pkm = self._empty_slot
 
         if expected_pkm in self._sprites and any(
-            self._get_sprite_distance(im, pkm_im) < self.box_sprite_max_distance
+            _get_sprite_distance(im, pkm_im) < self.box_sprite_max_distance
             for pkm_im in self._sprites[expected_pkm]
         ):
             return expected_pkm
 
         matching_pkm = {}
         for pkm, pkm_ims in self._sprites.items():
-            distance = min(self._get_sprite_distance(im, pkm_im) for pkm_im in pkm_ims)
+            distance = min(_get_sprite_distance(im, pkm_im) for pkm_im in pkm_ims)
             if distance < self.box_sprite_max_distance:
                 matching_pkm[pkm] = distance
         if matching_pkm:
@@ -333,6 +327,94 @@ class ScreenshotsGameInfo(GameInfo):
             / f"{self._game_path.stem}-{box_id + 1}-{slot_id + 1}.png"
         )
         return self._empty_slot
+
+
+class InputScreenshots:
+    game_icon_coords = (1185, 512, 1227, 554)
+    game_icon_max_distance = 2048
+
+    box_number_coords = (1095, 522, 1124, 541)
+    box_number_max_distance = 1024
+
+    def __init__(self, base_path: Path) -> None:
+        self._base_path = base_path
+        self._input_path = base_path / "input_screenshots"
+        self._game_icons_path = self._input_path / "game_icons"
+        self._unnamed_game_icons_path = self._game_icons_path / "unnamed"
+        self._box_numbers_path = self._input_path / "box_numbers"
+        self._unnamed_box_numbers_path = self._box_numbers_path / "unnamed"
+
+        self._unnamed_game_icons_path.mkdir(parents=True, exist_ok=True)
+        self._unnamed_box_numbers_path.mkdir(parents=True, exist_ok=True)
+
+    @functools.cached_property
+    def _game_icons(self) -> dict[str, Image.Image]:
+        data = {}
+        for f in self._game_icons_path.glob("*.png"):
+            if not (self._base_path / f.stem).is_dir():
+                f.unlink()
+            else:
+                with Image.open(f) as im:
+                    im.load()
+                    data[f.stem] = im
+
+        return data
+
+    @functools.cached_property
+    def _box_numbers(self) -> dict[int, Image.Image]:
+        data = {}
+        for f in self._box_numbers_path.glob("*.png"):
+            try:
+                num = int(f.stem)
+            except ValueError:
+                f.unlink()
+            else:
+                with Image.open(f) as im:
+                    im.load()
+                    data[num] = im
+
+        return data
+
+    def load(self) -> None:
+        for f in sorted(self._input_path.glob("*.jpg")):
+            with Image.open(f) as im:
+                game = self._parse_game_icon(im.crop(self.game_icon_coords), f.stem)
+                box_number = self._parse_box_number(
+                    im.crop(self.box_number_coords), f.stem
+                )
+            if game and box_number:
+                f.replace(self._base_path / game / f"{box_number}.jpg")
+
+    def _parse_game_icon(self, im: Image.Image, name: str) -> str | None:
+        matching_games = {}
+        for game, icon_im in self._game_icons.items():
+            distance = _get_sprite_distance(im, icon_im)
+            if distance < self.game_icon_max_distance:
+                matching_games[game] = distance
+        if matching_games:
+            return min(matching_games.keys(), key=lambda x: matching_games[x])
+
+        im.save(self._unnamed_game_icons_path / f"{name}.png")
+        return None
+
+    def _parse_box_number(self, im: Image.Image, name: str) -> int | None:
+        matching_numbers = {}
+        for number, number_im in self._box_numbers.items():
+            distance = _get_sprite_distance(im, number_im)
+            if distance < self.box_number_max_distance:
+                matching_numbers[number] = distance
+        if matching_numbers:
+            return min(matching_numbers.keys(), key=lambda x: matching_numbers[x])
+
+        im.save(self._unnamed_box_numbers_path / f"{name}.png")
+        return None
+
+
+def _get_sprite_distance(im: Image.Image, im2: Image.Image) -> int:
+    return sum(
+        r // 8 + g // 8 + b // 8
+        for r, g, b in list(ImageChops.difference(im, im2).getdata())
+    )
 
 
 _games: dict[str, tuple[PKHeX.Core.GameVersion, int]] = {  # type: ignore[no-any-unimported]

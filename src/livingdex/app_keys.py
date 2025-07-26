@@ -12,6 +12,4 @@ games = web.AppKey("games", dict[str, GameData])
 sse_streams = web.AppKey(
     "sse_streams", weakref.WeakKeyDictionary[aiohttp_sse.EventSourceResponse, str]
 )
-watches_tasks = web.AppKey(
-    "watches_tasks", tuple[asyncio.Task[None], asyncio.Task[None]]
-)
+watches_tasks = web.AppKey("watches_tasks", list[asyncio.Task[None]])
