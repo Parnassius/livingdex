@@ -175,6 +175,8 @@ class ScreenshotsGameInfo(GameInfo):
         self._game_box_sprites_path.mkdir(parents=True, exist_ok=True)
         self._unnamed_box_sprites_path.mkdir(parents=True, exist_ok=True)
 
+        self._unknown_slot = PKM(self, 0, 0, is_unknown=True)
+
         super().__init__(base_path, game_path, skipped_pokemon)
 
     def _load_save_file(self) -> PKHeX.Core.SaveFile:  # type: ignore[no-any-unimported]
@@ -236,11 +238,13 @@ class ScreenshotsGameInfo(GameInfo):
                 continue
 
             with screenshot_path.open("rb") as f:
-                h = hashlib.file_digest(f, "sha256")
+                screenshot_digest = hashlib.file_digest(f, "sha256").hexdigest()
             box_sprites = sorted(x.stem for x in self._box_sprites_path.glob("*.png"))
-            h.update(":".join(box_sprites).encode())
-            digest = h.hexdigest()
+            box_sprites_digest = hashlib.sha256(
+                ":".join(box_sprites).encode()
+            ).hexdigest()
 
+            cached_data = None
             json_cache_path = self._cache_path / f"{box_id + 1}.json"
             try:
                 with json_cache_path.open("r", encoding="utf-8") as f:
@@ -248,21 +252,19 @@ class ScreenshotsGameInfo(GameInfo):
             except (FileNotFoundError, json.JSONDecodeError):
                 pass
             else:
-                if digest == cache["digest"]:
-                    data.append(
-                        [
-                            self._empty_slot if params is None else PKM(self, **params)
-                            for params in cache["data"]
-                        ]
-                    )
-                    continue
+                if screenshot_digest == cache["screenshot_digest"]:
+                    cached_data = [PKM(self, **params) for params in cache["data"]]
+                    if box_sprites_digest == cache["box_sprites_digest"]:
+                        data.append(cached_data)
+                        continue
 
             with Image.open(screenshot_path) as im:
-                parsed_box_data = self._parse_box_data(im, box_id)
+                parsed_box_data = self._parse_box_data(im, box_id, cached_data)
 
             data.append(parsed_box_data)
             cache = {
-                "digest": digest,
+                "screenshot_digest": screenshot_digest,
+                "box_sprites_digest": box_sprites_digest,
                 "data": [pkm.to_dict() for pkm in parsed_box_data],
             }
             with json_cache_path.open("w", encoding="utf-8") as f:
@@ -270,13 +272,20 @@ class ScreenshotsGameInfo(GameInfo):
 
         return data
 
-    def _parse_box_data(self, im: Image.Image, box_id: int) -> list[PKM]:
+    def _parse_box_data(
+        self, im: Image.Image, box_id: int, cached_data: list[PKM] | None
+    ) -> list[PKM]:
         data = []
 
         x1, y1, x2, y2 = self.box_first_sprite_coords
         for row in range(self.box_rows):
             offset_y = self.box_sprites_offset_y * row
             for col in range(self.box_cols):
+                if cached_data:
+                    cached_pkm = cached_data[row * self.box_cols + col]
+                    if not cached_pkm.is_unknown:
+                        data.append(cached_pkm)
+                        continue
                 offset_x = self.box_sprites_offset_x * col
                 coords = (
                     x1 + offset_x,
@@ -326,7 +335,7 @@ class ScreenshotsGameInfo(GameInfo):
             self._unnamed_box_sprites_path
             / f"{self._game_path.stem}-{box_id + 1}-{slot_id + 1}.png"
         )
-        return self._empty_slot
+        return self._unknown_slot
 
 
 class InputScreenshots:

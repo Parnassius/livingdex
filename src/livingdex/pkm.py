@@ -16,6 +16,7 @@ class PKM:
         form: int,
         form_argument: int = 0,
         is_egg: bool = False,
+        is_unknown: bool = False,
     ) -> None:
         self.game_info = game_info
 
@@ -23,6 +24,7 @@ class PKM:
         self._form = form
         self._form_argument = form_argument
         self.is_egg = is_egg
+        self.is_unknown = is_unknown
 
     @classmethod
     def from_pkhex(  # type: ignore[no-any-unimported]
@@ -37,13 +39,12 @@ class PKM:
         )
 
     def to_dict(self) -> dict[str, Any] | None:
-        if self.species == 0:
-            return None
         return {
             "species": self.species,
             "form": self._form,
             "form_argument": self._form_argument,
             "is_egg": self.is_egg,
+            "is_unknown": self.is_unknown,
         }
 
     @property
@@ -199,7 +200,7 @@ class PKM:
         return (getattr(info, dex_attribute), 0 if is_local else 1)
 
     def evolves_from(self, other: "PKM") -> bool:
-        if other.is_egg:
+        if self.is_egg or other.is_egg or self.is_unknown or other.is_unknown:
             return False
         tree = PKHeX.Core.EvolutionTree.GetEvolutionTree(self.game_info.context)
         return any(
@@ -208,6 +209,8 @@ class PKM:
         )
 
     def __str__(self) -> str:
+        if self.is_unknown:
+            return "Unknown"
         if not self:
             return ""
         if self.is_egg:
@@ -221,11 +224,12 @@ class PKM:
         cls = type(self)
         return (
             f"{cls.__module__}.{cls.__qualname__}"
-            f"({self.game_info!r}, {self.species!r}, {self.form!r}, {self.is_egg!r})"
+            f"({self.game_info!r}, {self.species!r}, {self.form!r}, "
+            f"{self.is_egg!r}, {self.is_unknown!r})"
         )
 
     def __bool__(self) -> bool:
-        return self.species != 0
+        return self.species != 0 or self.is_unknown
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, type(self)):
@@ -239,6 +243,8 @@ class PKM:
     def _key(self) -> tuple[int, int, int]:
         if self.is_egg:
             return (-1, 0, 0)
+        if self.is_unknown:
+            return (-2, 0, 0)
         return (self.species, self.form, self.form_argument)
 
 
@@ -261,6 +267,8 @@ class LGPEStarterPKM(PKM):
             return NotImplemented
         if type(other) is type(self):
             return True
+        if other.is_egg or other.is_unknown:
+            return False
         return (PKHeX.Core.Species(other.species), other.form) in (
             (PKHeX.Core.Species.Pikachu, 8),
             (PKHeX.Core.Species.Eevee, 1),
