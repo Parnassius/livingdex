@@ -152,7 +152,7 @@ class ScreenshotsGameInfo(GameInfo):
     box_sprites_offset_x = 92
     box_sprites_offset_y = 76
 
-    box_sprite_max_distance = 3072
+    box_sprite_max_distance = 4096
 
     def __init__(  # type: ignore[no-any-unimported]
         self,
@@ -397,7 +397,7 @@ class InputScreenshots:
     def _parse_game_icon(self, im: Image.Image, name: str) -> str | None:
         matching_games = {}
         for game, icon_im in self._game_icons.items():
-            distance = _get_sprite_distance(im, icon_im)
+            distance = _get_sprite_distance(im, icon_im, False)
             if distance < self.game_icon_max_distance:
                 matching_games[game] = distance
         if matching_games:
@@ -409,7 +409,7 @@ class InputScreenshots:
     def _parse_box_number(self, im: Image.Image, name: str) -> int | None:
         matching_numbers = {}
         for number, number_im in self._box_numbers.items():
-            distance = _get_sprite_distance(im, number_im)
+            distance = _get_sprite_distance(im, number_im, False)
             if distance < self.box_number_max_distance:
                 matching_numbers[number] = distance
         if matching_numbers:
@@ -419,19 +419,23 @@ class InputScreenshots:
         return None
 
 
-def _get_sprite_distance(im: Image.Image, im2: Image.Image) -> int:
-    differences = []
-    for trans_x, trans_y in itertools.product([-1, 0, 1], repeat=2):
-        if trans_x == 0 and trans_y == 0:
-            difference = ImageChops.difference(im, im2)
-        else:
-            difference = ImageChops.difference(
-                im,
-                im2.transform(
-                    im2.size, Image.Transform.AFFINE, (1, 0, trans_x, 0, 1, trans_y)
-                ),
-            )
-        differences.append(difference.getdata())
+def _get_sprite_distance(
+    im: Image.Image, im2: Image.Image, loose_match: bool = True
+) -> int:
+    differences = [ImageChops.difference(im, im2).getdata()]
+    if loose_match:
+        for trans_x, trans_y in itertools.product([-1, 0, 1], repeat=2):
+            if trans_x != 0 or trans_y != 0:
+                differences.append(
+                    ImageChops.difference(
+                        im,
+                        im2.transform(
+                            im2.size,
+                            Image.Transform.AFFINE,
+                            (1, 0, trans_x, 0, 1, trans_y),
+                        ),
+                    ).getdata()
+                )
 
     return sum(
         min(r // 8 + g // 8 + b // 8 for r, g, b in pixels)
