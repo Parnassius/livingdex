@@ -411,9 +411,22 @@ class InputScreenshots:
 
 
 def _get_sprite_distance(im: Image.Image, im2: Image.Image) -> int:
+    differences = []
+    for trans_x, trans_y in itertools.product([-1, 0, 1], repeat=2):
+        if trans_x == 0 and trans_y == 0:
+            difference = ImageChops.difference(im, im2)
+        else:
+            difference = ImageChops.difference(
+                im,
+                im2.transform(
+                    im2.size, Image.Transform.AFFINE, (1, 0, trans_x, 0, 1, trans_y)
+                ),
+            )
+        differences.append(difference.getdata())
+
     return sum(
-        r // 8 + g // 8 + b // 8
-        for r, g, b in list(ImageChops.difference(im, im2).getdata())
+        min(r // 8 + g // 8 + b // 8 for r, g, b in pixels)
+        for pixels in zip(*differences, strict=True)
     )
 
 
