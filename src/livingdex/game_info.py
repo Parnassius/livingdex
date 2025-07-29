@@ -340,10 +340,10 @@ class ScreenshotsGameInfo(GameInfo):
 
 class InputScreenshots:
     game_icon_coords = (1185, 512, 1227, 554)
-    game_icon_max_distance = 2048
+    game_icon_max_distance = 4096
 
     box_number_coords = (1095, 522, 1124, 541)
-    box_number_max_distance = 1024
+    box_number_max_distance = 2048
 
     def __init__(self, base_path: Path) -> None:
         self._base_path = base_path
@@ -397,7 +397,7 @@ class InputScreenshots:
     def _parse_game_icon(self, im: Image.Image, name: str) -> str | None:
         matching_games = {}
         for game, icon_im in self._game_icons.items():
-            distance = _get_sprite_distance(im, icon_im, False)
+            distance = _get_sprite_distance(im, icon_im)
             if distance < self.game_icon_max_distance:
                 matching_games[game] = distance
         if matching_games:
