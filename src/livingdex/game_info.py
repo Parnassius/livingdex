@@ -218,6 +218,12 @@ class ScreenshotsGameInfo(GameInfo):
                 is_egg = False
             pkm = PKM(self, species, form, form_argument, is_egg)
 
+            if pkm.form >= len(pkm.all_forms) or (
+                pkm.form_argument and pkm.form_argument >= len(pkm.all_form_arguments)
+            ):
+                f.unlink()
+                continue
+
             with Image.open(f) as im:
                 im.load()
                 data[pkm].append(im)

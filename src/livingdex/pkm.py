@@ -62,7 +62,7 @@ class PKM:
 
     @property
     def form_argument(self) -> int:
-        if PKHeX.Core.Species(self.species) == PKHeX.Core.Species.Alcremie:
+        if self.all_form_arguments:
             return self._form_argument
         return 0
 
@@ -73,8 +73,8 @@ class PKM:
     @property
     def form_name(self) -> str:
         form = self.all_forms[self.form]
-        if PKHeX.Core.Species(self.species) == PKHeX.Core.Species.Alcremie:
-            form += f" {PKHeX.Core.AlcremieDecoration(self.form_argument)}"
+        if form_arguments := self.all_form_arguments:
+            form += f" {form_arguments[self.form_argument]}"
         return form
 
     @property
@@ -159,10 +159,21 @@ class PKM:
         )
 
     @property
+    def all_form_arguments(self) -> Sequence[str]:
+        arguments_enums = {
+            PKHeX.Core.Species.Alcremie: PKHeX.Core.AlcremieDecoration,
+        }
+        species = PKHeX.Core.Species(self.species)
+        if species in arguments_enums:
+            enum = arguments_enums[species]
+            return enum.GetNames(enum)  # type: ignore[no-any-return]
+        return []
+
+    @property
     def forms_with_arguments(self) -> Iterable[Self]:
         yield self
 
-        if PKHeX.Core.Species(self.species) == PKHeX.Core.Species.Alcremie:
+        if self.all_form_arguments:
             for form_argument in range(
                 PKHeX.Core.FormArgumentUtil.GetFormArgumentMax(
                     self.species, self.form, self.game_info.context
