@@ -43,6 +43,10 @@ class GameInfo:
 
     @property
     @abstractmethod
+    def box_count(self) -> int: ...
+
+    @property
+    @abstractmethod
     def box_slot_count(self) -> int: ...
 
     @functools.cached_property
@@ -90,7 +94,7 @@ class GameInfo:
                     data_other.append(pkm)
 
             total_boxes = sum(
-                math.ceil(len(data) / self.box_slot_count)
+                math.ceil(len(data) / self.box_count)
                 for data in (*data_regional_dexes.values(), data_other)
             )
             data = []
@@ -121,6 +125,13 @@ class PKHeXGameInfo(GameInfo):
         return PKHeX.Core.SaveUtil.GetVariantSAV(str(self._game_path))
 
     @property
+    def box_count(self) -> int:
+        if isinstance(self._save_file, PKHeX.Core.SAV7b):
+            return 1  # Single box with 6 columns
+
+        return self._save_file.BoxCount  # type: ignore[no-any-return]
+
+    @property
     def box_slot_count(self) -> int:
         if isinstance(self._save_file, PKHeX.Core.SAV7b):
             return 6  # Single box with 6 columns
@@ -144,7 +155,7 @@ class PKHeXGameInfo(GameInfo):
         return data
 
 
-class ScreenshotsGameInfo(GameInfo):
+class ScreenshotsGameInfo(PKHeXGameInfo):
     box_rows = 5
     box_cols = 6
 
@@ -161,10 +172,8 @@ class ScreenshotsGameInfo(GameInfo):
         skipped_pokemon: list[tuple[PKHeX.Core.Species, int]],
         *,
         game_version: PKHeX.Core.GameVersion,
-        box_count: int,
     ) -> None:
         self.game_version = game_version
-        self.box_count = box_count
 
         self._cache_path = game_path / "cache"
         self._game_box_sprites_path = game_path / "box_sprites"
@@ -181,10 +190,6 @@ class ScreenshotsGameInfo(GameInfo):
 
     def _load_save_file(self) -> PKHeX.Core.SaveFile:  # type: ignore[no-any-unimported]
         return PKHeX.Core.SaveUtil.GetBlankSAV(self.game_version, "")
-
-    @property
-    def box_slot_count(self) -> int:
-        return self.box_rows * self.box_cols
 
     @functools.cached_property
     def _sprites(self) -> dict[PKM, list[Image.Image]]:
@@ -449,11 +454,6 @@ def _get_sprite_distance(
     )
 
 
-_games: dict[str, tuple[PKHeX.Core.GameVersion, int]] = {  # type: ignore[no-any-unimported]
-    "scarlet_violet": (PKHeX.Core.GameVersion.SV, 32),
-}
-
-
 def load(  # type: ignore[no-any-unimported]
     base_path: Path,
     save_path: Path,
@@ -462,14 +462,14 @@ def load(  # type: ignore[no-any-unimported]
     if save_path.is_file():
         game_info: GameInfo = PKHeXGameInfo(base_path, save_path, skipped_pokemon)
     else:
-        game = (save_path / "game_id").read_text()
-        game_version, box_count = _games[game.strip()]
+        game_version = PKHeX.Core.GameVersion.Parse(
+            PKHeX.Core.GameVersion, (save_path / "game_version").read_text().strip()
+        )
         game_info = ScreenshotsGameInfo(
             base_path,
             save_path,
             skipped_pokemon,
             game_version=game_version,
-            box_count=box_count,
         )
 
     # Pre-cache all cached properties
