@@ -1,10 +1,19 @@
-.PHONY: deps
-deps:
+.venv.dir: uv.lock
 	@uv sync
+	@touch .venv.dir
+
+.node_modules.dir: package-lock.json
 	@npm ci
+	@touch .node_modules.dir
+
+.nuget.dir: packages.lock.json
 	@rm -rf nuget
 	@dotnet restore --packages nuget
 	@cp nuget/pkhex.core/*/lib/net*/PKHeX.Core.dll .venv/lib/python*/site-packages
+	@touch .nuget.dir
+
+.PHONY: deps
+deps: .venv.dir .node_modules.dir .nuget.dir
 
 .PHONY: format
 format:
