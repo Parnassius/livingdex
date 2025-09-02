@@ -4,9 +4,9 @@
     "net9.0": {
       "PKHeX.Core": {
         "type": "Direct",
-        "requested": "[25.6.9, )",
-        "resolved": "25.6.9",
-        "contentHash": "2lnFSsdqJklwroMWXswDTy74OcUR1b/EpwFYZWfkP9Tcchm4E/othzB9ARRL2cUemG7ya1j4wubiE8BxdWBXbg=="
+        "requested": "[25.8.31, )",
+        "resolved": "25.8.31",
+        "contentHash": "Umm6C6psBjI9JXCqpGQY9CgyfsoeGPSCJkr8Z5Fa3Ka/A+OZYVjsuQkQV26CwS4iN8FeW7da4hg7M/rDJi9Vxg=="
       }
     }
   }
