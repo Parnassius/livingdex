@@ -122,7 +122,7 @@ class GameInfo:
 
 class PKHeXGameInfo(GameInfo):
     def _load_save_file(self) -> PKHeX.Core.SaveFile:  # type: ignore[no-any-unimported]
-        return PKHeX.Core.SaveUtil.GetVariantSAV(str(self._game_path))
+        return PKHeX.Core.SaveUtil.GetSaveFile(str(self._game_path))
 
     @property
     def box_count(self) -> int:
@@ -189,7 +189,7 @@ class ScreenshotsGameInfo(PKHeXGameInfo):
         super().__init__(base_path, game_path, skipped_pokemon)
 
     def _load_save_file(self) -> PKHeX.Core.SaveFile:  # type: ignore[no-any-unimported]
-        return PKHeX.Core.SaveUtil.GetBlankSAV(self.game_version, "")
+        return PKHeX.Core.BlankSaveFile.Get(self.game_version)
 
     @functools.cached_property
     def _sprites(self) -> dict[PKM, list[Image.Image]]:
