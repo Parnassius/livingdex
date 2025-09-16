@@ -142,10 +142,7 @@ class PKM:
             # Magearna Original Color, unreleased before Generation 8
             skipped_pokemon.append((PKHeX.Core.Species.Magearna, 1))
 
-        if (species, form) in skipped_pokemon:
-            return False
-
-        return True
+        return (species, form) not in skipped_pokemon
 
     @property
     def all_forms(self) -> Sequence[str]:
@@ -180,7 +177,7 @@ class PKM:
                 )
             ):
                 new_form = copy.copy(self)
-                new_form._form_argument = form_argument + 1
+                new_form._form_argument = form_argument + 1  # noqa: SLF001
                 yield new_form
 
     def dex_order(self, dex_attribute: str) -> tuple[int, int]:

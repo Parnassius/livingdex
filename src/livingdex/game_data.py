@@ -2,11 +2,15 @@ import asyncio
 import functools
 import json
 import time
+from contextlib import suppress
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from livingdex import game_info
 from livingdex.pkhex import PKHeX
-from livingdex.pkm import PKM
+
+if TYPE_CHECKING:
+    from livingdex.pkm import PKM
 
 
 class GameData:
@@ -113,10 +117,8 @@ class GameData:
 
         for attr in dir(self):
             if isinstance(getattr(type(self), attr, None), functools.cached_property):
-                try:
+                with suppress(AttributeError):
                     delattr(self, attr)
-                except AttributeError:
-                    pass
 
         self.timestamp = int(time.time())
 

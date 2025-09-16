@@ -1,6 +1,7 @@
 import asyncio
 import tomllib
 import weakref
+from contextlib import suppress
 from pathlib import Path
 
 import aiohttp_jinja2
@@ -19,10 +20,8 @@ async def setup_file_watches(app: web.Application) -> None:
     async def _setup_input_screenshots_watches() -> None:
         input_path = app[app_keys.data_path] / "input_screenshots"
         async for _ in watchfiles.awatch(input_path, recursive=False):
-            try:
+            with suppress(OSError):
                 await asyncio.to_thread(InputScreenshots(app[app_keys.data_path]).load)
-            except OSError:
-                pass
 
     async def _setup_box_sprites_watches() -> None:
         screenshots_games = [
