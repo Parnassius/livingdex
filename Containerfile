@@ -14,7 +14,6 @@ ENV UV_COMPILE_BYTECODE=1
 ENV UV_FROZEN=1
 ENV UV_LINK_MODE=copy
 
-RUN apk add --no-cache gcc musl-dev libffi-dev
 RUN apk add --no-cache dotnet9-sdk
 
 COPY --from=ghcr.io/astral-sh/uv /uv /bin/uv
