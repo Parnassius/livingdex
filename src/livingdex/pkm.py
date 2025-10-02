@@ -119,8 +119,8 @@ class PKM:
             or PKHeX.Core.FormInfo.IsBattleOnlyForm(
                 self.species, form, self.game_info.generation
             )
-            or PKHeX.Core.FormInfo.IsUntradable(
-                self.species, form, 0, self.game_info.generation
+            or PKHeX.Core.FormInfo.IsFusedForm(
+                self.species, form, self.game_info.generation
             )
             or PKHeX.Core.FormInfo.IsTotemForm(
                 self.species, form, self.game_info.context
@@ -128,6 +128,12 @@ class PKM:
             or PKHeX.Core.FormInfo.IsLordForm(
                 self.species, form, self.game_info.context
             )
+        ):
+            return False
+
+        if (
+            self.game_info.context == PKHeX.Core.EntityContext.Gen7b
+            and LGPEStarterPKM.is_starter(self.species, form)
         ):
             return False
 
@@ -277,7 +283,11 @@ class LGPEStarterPKM(PKM):
             return True
         if other.is_egg or other.is_unknown:
             return False
-        return (PKHeX.Core.Species(other.species), other.form) in (
+        return self.is_starter(other.species, other.form)
+
+    @staticmethod
+    def is_starter(species: int, form: int) -> bool:
+        return (PKHeX.Core.Species(species), form) in (
             (PKHeX.Core.Species.Pikachu, 8),
             (PKHeX.Core.Species.Eevee, 1),
         )
