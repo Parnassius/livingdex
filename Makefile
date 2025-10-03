@@ -6,7 +6,7 @@
 	@npm ci
 	@touch .node_modules.dir
 
-.nuget.dir: packages.lock.json
+.nuget.dir: packages.lock.json .venv.dir
 	@rm -rf nuget
 	@dotnet restore --packages nuget
 	@cp nuget/pkhex.core/*/lib/net*/PKHeX.Core.dll .venv/lib/python*/site-packages
