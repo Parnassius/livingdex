@@ -4,13 +4,10 @@ import json
 import time
 from contextlib import suppress
 from pathlib import Path
-from typing import TYPE_CHECKING
 
 from livingdex import game_info
 from livingdex.pkhex import PKHeX
-
-if TYPE_CHECKING:
-    from livingdex.pkm import PKM
+from livingdex.pkm import PKM
 
 
 class GameData:
