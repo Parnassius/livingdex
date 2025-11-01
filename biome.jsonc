@@ -1,4 +1,7 @@
 {
+  "files": {
+    "includes": ["**/*.css", "**/*.js"],
+  },
   "formatter": {
     "useEditorconfig": true,
     "lineWidth": 88,  // Black's default
