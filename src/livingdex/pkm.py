@@ -140,13 +140,10 @@ class PKM:
         species = PKHeX.Core.Species(self.species)
         skipped_pokemon = [
             *self.game_info.skipped_pokemon,
-            (PKHeX.Core.Species.Floette, 5),  # Floette Eternal Flower, never released
-            (PKHeX.Core.Species.Zygarde, 2),  # Power Construct forms, they are aliased
-            (PKHeX.Core.Species.Zygarde, 3),  # to the Aura Break ones
+            # Power Construct forms, they are aliased to the Aura Break ones
+            (PKHeX.Core.Species.Zygarde, 2),
+            (PKHeX.Core.Species.Zygarde, 3),
         ]
-        if self.game_info.generation <= 7:
-            # Magearna Original Color, unreleased before Generation 8
-            skipped_pokemon.append((PKHeX.Core.Species.Magearna, 1))
 
         return (species, form) not in skipped_pokemon
 
