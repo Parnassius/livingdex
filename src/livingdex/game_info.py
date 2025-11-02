@@ -9,7 +9,7 @@ from pathlib import Path
 
 from PIL import Image, ImageChops
 
-from livingdex.pkhex import PKHeX
+from livingdex.dotnet import PKHeX
 from livingdex.pkm import PKM, LGPEStarterPKM
 
 
@@ -28,6 +28,10 @@ class GameInfo:
 
     @abstractmethod
     def _load_save_file(self) -> PKHeX.Core.SaveFile: ...  # type: ignore[no-any-unimported]
+
+    @property
+    def blank_pkm(self) -> PKHeX.Core.PKM:  # type: ignore[no-any-unimported]
+        return self._save_file.BlankPKM
 
     @property
     def generation(self) -> int:
@@ -65,15 +69,17 @@ class GameInfo:
         if isinstance(self._save_file, PKHeX.Core.SAV7b):
             data.append(LGPEStarterPKM(self))
 
-        for species in range(1, personal.MaxSpeciesID + 1):
-            if not personal.IsSpeciesInGame(species):
+        for species_id in range(1, personal.MaxSpeciesID + 1):
+            if not personal.IsSpeciesInGame(species_id):
                 continue
-            form0 = PKM(self, species, 0)
-            if form0.is_form_valid(0):
+            form0 = PKM(self, species_id, 0)
+            if form0.is_valid:
                 data.extend(form0.forms_with_arguments)
-            for form in range(1, len(form0.all_forms)):
-                if form0.is_form_valid(form) and not form0.ignore_alternate_forms:
-                    data.extend(PKM(self, species, form).forms_with_arguments)
+            if not form0.ignore_alternate_forms:
+                for form_id in range(1, len(form0.all_forms)):
+                    form = PKM(self, species_id, form_id)
+                    if form.is_valid:
+                        data.extend(form.forms_with_arguments)
 
         sections = {
             PKHeX.Core.SAV8SWSH: ["PokeDexIndex", "ArmorDexIndex", "CrownDexIndex"],
@@ -91,7 +97,8 @@ class GameInfo:
                         data_regional_dexes[dex].append(pkm)
                         break
                 else:
-                    data_other.append(pkm)
+                    if pkm.is_obtainable():
+                        data_other.append(pkm)
 
             total_boxes = sum(
                 math.ceil(len(data) / self.box_count)

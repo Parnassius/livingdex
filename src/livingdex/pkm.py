@@ -2,7 +2,7 @@ import copy
 from collections.abc import Iterable, Sequence
 from typing import TYPE_CHECKING, Any, Self
 
-from livingdex.pkhex import PKHeX
+from livingdex.dotnet import PKHeX, System
 
 if TYPE_CHECKING:
     from livingdex.game_info import GameInfo
@@ -113,27 +113,31 @@ class PKM:
             )
         return PKHeX.Core.Species(self.species) in ignored_species
 
-    def is_form_valid(self, form: int) -> bool:
+    @property
+    def is_valid(self) -> bool:
         if (
-            not self.game_info.personal.IsPresentInGame(self.species, form)
+            not self.game_info.personal.IsPresentInGame(self.species, self.form)
             or PKHeX.Core.FormInfo.IsBattleOnlyForm(
-                self.species, form, self.game_info.generation
+                self.species, self.form, self.game_info.generation
             )
             or PKHeX.Core.FormInfo.IsFusedForm(
-                self.species, form, self.game_info.generation
+                self.species, self.form, self.game_info.generation
             )
             or PKHeX.Core.FormInfo.IsTotemForm(
-                self.species, form, self.game_info.context
+                self.species, self.form, self.game_info.context
             )
             or PKHeX.Core.FormInfo.IsLordForm(
-                self.species, form, self.game_info.context
+                self.species, self.form, self.game_info.context
+            )
+            or not self.is_obtainable(
+                allow_transfers=self.game_info.generation < 8, allow_mystery_gifts=True
             )
         ):
             return False
 
         if (
             self.game_info.context == PKHeX.Core.EntityContext.Gen7b
-            and LGPEStarterPKM.is_starter(self.species, form)
+            and LGPEStarterPKM.is_starter(self.species, self.form)
         ):
             return False
 
@@ -145,7 +149,87 @@ class PKM:
             (PKHeX.Core.Species.Zygarde, 3),
         ]
 
-        return (species, form) not in skipped_pokemon
+        return (species, self._form) not in skipped_pokemon
+
+    def is_obtainable(
+        self, *, allow_transfers: bool = False, allow_mystery_gifts: bool = False
+    ) -> bool:
+        if PKHeX.Core.Species(self.species) == PKHeX.Core.Species.Phione:
+            return PKM(
+                self.game_info, int(PKHeX.Core.Species.Manaphy), 0
+            ).is_obtainable(
+                allow_transfers=allow_transfers,
+                allow_mystery_gifts=allow_mystery_gifts,
+            )
+
+        if (
+            self.game_info.context == PKHeX.Core.EntityContext.Gen9
+            and PKHeX.Core.Species(self.species) == PKHeX.Core.Species.Gimmighoul
+            and self.form == 1
+        ):
+            return True
+
+        pkm = self.game_info.blank_pkm
+        pkm.Species = self.species
+        pkm.Form = self.form
+        PKHeX.Core.GenderApplicator.SetSaneGender(pkm, None)
+        if (
+            self.game_info.context
+            in (PKHeX.Core.EntityContext.Gen6, PKHeX.Core.EntityContext.Gen7)
+            and self.species == int(PKHeX.Core.Species.Meowstic)
+            and self.form == 1
+        ):
+            pkm.Gender = 1
+
+        versions = []
+        if not allow_transfers:
+            versions = [
+                x
+                for x in PKHeX.Core.GameVersion.GetValues(PKHeX.Core.GameVersion)
+                if PKHeX.Core.GameUtil.IsValidSavedVersion(x)
+                and PKHeX.Core.EntityContextExtensions.GetContext(x)
+                == self.game_info.context
+            ]
+
+        encs = PKHeX.Core.EncounterMovesetGenerator.GenerateEncounters(
+            pkm, System.ReadOnlyMemory[System.UInt16]([]), *versions
+        )
+        for enc in encs:
+            if not allow_mystery_gifts and enc.GetType().IsAssignableTo(
+                PKHeX.Core.MysteryGift
+            ):
+                continue
+
+            species = enc.Species
+            form = enc.Form
+            if (
+                PKHeX.Core.Species(species)
+                in (
+                    PKHeX.Core.Species.Scatterbug,
+                    PKHeX.Core.Species.Spewpa,
+                    PKHeX.Core.Species.Vivillon,
+                )
+                and form == PKHeX.Core.EncounterUtil.FormVivillon
+                and self.form <= PKHeX.Core.Vivillon3DS.MaxWildFormID
+            ) or form == PKHeX.Core.EncounterUtil.FormRandom:
+                form = self.form
+
+            if species == self.species and (
+                form == self.form
+                or PKHeX.Core.FormInfo.IsFormChangeable(
+                    species,
+                    form,
+                    self.form,
+                    self.game_info.context,
+                    self.game_info.context,
+                )
+            ):
+                return True
+
+            if self.evolves_from(PKM(self.game_info, species, form)):
+                return True
+
+        return False
 
     @property
     def all_forms(self) -> Sequence[str]:
@@ -214,10 +298,20 @@ class PKM:
         if self.is_egg or other.is_egg or self.is_unknown or other.is_unknown:
             return False
         tree = PKHeX.Core.EvolutionTree.GetEvolutionTree(self.game_info.context)
-        return any(
-            PKM(self.game_info, pre.Item1, pre.Item2) == other
-            for pre in tree.Reverse.GetPreEvolutions(self.species, self.form)
-        )
+        for pre in tree.Reverse.GetPreEvolutions(self.species, self._form):
+            if pre.Item1 == other.species and (
+                pre.Item2 == other._form  # noqa: SLF001
+                or PKHeX.Core.FormInfo.IsFormChangeable(
+                    pre.Item1,
+                    pre.Item2,
+                    other._form,  # noqa: SLF001
+                    self.game_info.context,
+                    self.game_info.context,
+                )
+            ):
+                return True
+
+        return False
 
     def __str__(self) -> str:
         if self.is_unknown:

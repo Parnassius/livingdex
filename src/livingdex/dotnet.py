@@ -5,9 +5,8 @@
 import pythonnet
 
 pythonnet.load("coreclr")
-
 import clr
+import System as System
 
 clr.AddReference("PKHeX.Core")
-
 import PKHeX as PKHeX

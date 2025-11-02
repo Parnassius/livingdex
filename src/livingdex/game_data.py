@@ -6,7 +6,7 @@ from contextlib import suppress
 from pathlib import Path
 
 from livingdex import game_info
-from livingdex.pkhex import PKHeX
+from livingdex.dotnet import PKHeX
 from livingdex.pkm import PKM
 
 
