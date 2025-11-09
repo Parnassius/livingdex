@@ -75,16 +75,16 @@ class GameInfo:
             form0 = PKM(self, species_id, 0)
             if form0.is_valid:
                 data.extend(form0.forms_with_arguments)
-            if not form0.ignore_alternate_forms:
-                for form_id in range(1, len(form0.all_forms)):
-                    form = PKM(self, species_id, form_id)
-                    if form.is_valid:
-                        data.extend(form.forms_with_arguments)
+            for form_id in range(1, len(form0.all_forms)):
+                form = PKM(self, species_id, form_id)
+                if form.is_valid and form not in data:
+                    data.extend(form.forms_with_arguments)
 
         sections = {
             PKHeX.Core.SAV8SWSH: ["PokeDexIndex", "ArmorDexIndex", "CrownDexIndex"],
             PKHeX.Core.SAV8LA: ["DexIndexHisui"],
             PKHeX.Core.SAV9SV: ["DexPaldea", "DexKitakami", "DexBlueberry"],
+            PKHeX.Core.SAV9ZA: ["DexIndex"],
         }
 
         if type(self._save_file) in sections:

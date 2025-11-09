@@ -21,7 +21,7 @@ class PKM:
         self.game_info = game_info
 
         self.species = species
-        self._form = form
+        self.form = form
         self._form_argument = form_argument
         self.is_egg = is_egg
         self.is_unknown = is_unknown
@@ -41,24 +41,24 @@ class PKM:
     def to_dict(self) -> dict[str, Any] | None:
         return {
             "species": self.species,
-            "form": self._form,
+            "form": self.form,
             "form_argument": self._form_argument,
             "is_egg": self.is_egg,
             "is_unknown": self.is_unknown,
         }
 
     @property
-    def form(self) -> int:
+    def normalized_form(self) -> int:
         if self.ignore_alternate_forms:
             return 0
 
         if PKHeX.Core.Species(self.species) == PKHeX.Core.Species.Zygarde:
-            if self._form == 2:  # 10%
+            if self.form == 2:  # 10%
                 return 1
-            if self._form == 3:  # 50%
+            if self.form == 3:  # 50%
                 return 0
 
-        return self._form
+        return self.form
 
     @property
     def form_argument(self) -> int:
@@ -141,15 +141,10 @@ class PKM:
         ):
             return False
 
-        species = PKHeX.Core.Species(self.species)
-        skipped_pokemon = [
-            *self.game_info.skipped_pokemon,
-            # Power Construct forms, they are aliased to the Aura Break ones
-            (PKHeX.Core.Species.Zygarde, 2),
-            (PKHeX.Core.Species.Zygarde, 3),
-        ]
-
-        return (species, self._form) not in skipped_pokemon
+        return (
+            PKHeX.Core.Species(self.species),
+            self.form,
+        ) not in self.game_info.skipped_pokemon
 
     def is_obtainable(
         self, *, allow_transfers: bool = False, allow_mystery_gifts: bool = False
@@ -298,13 +293,13 @@ class PKM:
         if self.is_egg or other.is_egg or self.is_unknown or other.is_unknown:
             return False
         tree = PKHeX.Core.EvolutionTree.GetEvolutionTree(self.game_info.context)
-        for pre in tree.Reverse.GetPreEvolutions(self.species, self._form):
+        for pre in tree.Reverse.GetPreEvolutions(self.species, self.form):
             if pre.Item1 == other.species and (
-                pre.Item2 == other._form  # noqa: SLF001
+                pre.Item2 == other.form
                 or PKHeX.Core.FormInfo.IsFormChangeable(
                     pre.Item1,
                     pre.Item2,
-                    other._form,  # noqa: SLF001
+                    other.form,
                     self.game_info.context,
                     self.game_info.context,
                 )
@@ -350,7 +345,7 @@ class PKM:
             return (-1, 0, 0)
         if self.is_unknown:
             return (-2, 0, 0)
-        return (self.species, self.form, self.form_argument)
+        return (self.species, self.normalized_form, self.form_argument)
 
 
 class LGPEStarterPKM(PKM):
