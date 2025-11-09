@@ -21,7 +21,7 @@ class PKM:
         self.game_info = game_info
 
         self.species = species
-        self._form = form
+        self.form = form
         self._form_argument = form_argument
         self.is_egg = is_egg
         self.is_unknown = is_unknown
@@ -41,24 +41,32 @@ class PKM:
     def to_dict(self) -> dict[str, Any] | None:
         return {
             "species": self.species,
-            "form": self._form,
+            "form": self.form,
             "form_argument": self._form_argument,
             "is_egg": self.is_egg,
             "is_unknown": self.is_unknown,
         }
 
     @property
-    def form(self) -> int:
+    def normalized_form(self) -> int:
         if self.ignore_alternate_forms:
             return 0
 
-        if PKHeX.Core.Species(self.species) == PKHeX.Core.Species.Zygarde:
-            if self._form == 2:  # 10%
+        species = PKHeX.Core.Species(self.species)
+
+        if (species, self.form) in (
+            (PKHeX.Core.Species.Greninja, 1),  # Battle Bond
+            (PKHeX.Core.Species.Rockruff, 1),  # Own Tempo
+        ):
+            return 0
+
+        if species == PKHeX.Core.Species.Zygarde:
+            if self.form == 2:  # 10%
                 return 1
-            if self._form == 3:  # 50%
+            if self.form == 3:  # 50%
                 return 0
 
-        return self._form
+        return self.form
 
     @property
     def form_argument(self) -> int:
@@ -72,7 +80,7 @@ class PKM:
 
     @property
     def form_name(self) -> str:
-        form = self.all_forms[self.form]
+        form = self.all_forms[self.normalized_form]
         if form_arguments := self.all_form_arguments:
             form += f" {form_arguments[self.form_argument]}"
         return form
@@ -91,13 +99,9 @@ class PKM:
             PKHeX.Core.Species.Mothim,  # The form is not cleared on evolution
             PKHeX.Core.Species.Arceus,  # Plates
             PKHeX.Core.Species.Genesect,  # Drives
-            PKHeX.Core.Species.Greninja,  # Battle Bond
             PKHeX.Core.Species.Scatterbug,  # Pattern for Vivillon
             PKHeX.Core.Species.Spewpa,  # Pattern for Vivillon
-            PKHeX.Core.Species.Rockruff,  # Own Tempo
             PKHeX.Core.Species.Silvally,  # Memories
-            PKHeX.Core.Species.Koraidon,  # Builds
-            PKHeX.Core.Species.Miraidon,  # Modes
         ]
         if self.game_info.generation == 3:
             # Only one form is available, depending on the game being played
@@ -138,15 +142,10 @@ class PKM:
         ):
             return False
 
-        species = PKHeX.Core.Species(self.species)
-        skipped_pokemon = [
-            *self.game_info.skipped_pokemon,
-            # Power Construct forms, they are aliased to the Aura Break ones
-            (PKHeX.Core.Species.Zygarde, 2),
-            (PKHeX.Core.Species.Zygarde, 3),
-        ]
-
-        return (species, self._form) not in skipped_pokemon
+        return (
+            PKHeX.Core.Species(self.species),
+            self.form,
+        ) not in self.game_info.skipped_pokemon
 
     def is_obtainable(
         self,
@@ -180,7 +179,7 @@ class PKM:
                 x
                 for x in PKHeX.Core.GameVersion.GetValues(PKHeX.Core.GameVersion)
                 if PKHeX.Core.GameUtil.IsValidSavedVersion(x)
-                and PKHeX.Core.EntityContextExtensions.GetContext(x)
+                and PKHeX.Core.EntityContextExtensions.get_Context(x)
                 == self.game_info.context
             ]
 
@@ -206,11 +205,11 @@ class PKM:
         ):
             if checked_forms is None:
                 checked_forms = set()
-            checked_forms.add((self.species, self._form))
+            checked_forms.add((self.species, self.form))
             tree = PKHeX.Core.EvolutionTree.GetEvolutionTree(self.game_info.context)
             related = [
                 (x.Item1, x.Item2)
-                for x in tree.GetEvolutionsAndPreEvolutions(self.species, self._form)
+                for x in tree.GetEvolutionsAndPreEvolutions(self.species, self.form)
                 if (x.Item1, x.Item2) not in checked_forms
             ]
             other_parents = {
@@ -225,7 +224,7 @@ class PKM:
                     (PKHeX.Core.Species.Indeedee, 1, PKHeX.Core.Species.Indeedee, 0),
                 )
             }
-            if other_parent := other_parents.get((self.species, self._form)):
+            if other_parent := other_parents.get((self.species, self.form)):
                 related.append(other_parent)
             return any(
                 PKM(self.game_info, species, form).is_obtainable(
@@ -304,44 +303,60 @@ class PKM:
                 new_form._form_argument = form_argument + 1  # noqa: SLF001
                 yield new_form
 
-    def dex_order(self, dex_attribute: str) -> tuple[int, int]:
+    @property
+    def is_local_form(self) -> bool:
+        species = PKHeX.Core.Species(self.species)
         info = self.game_info.personal[self.species, self.form]
 
-        is_local = False
-        if info.IsRegionalForm:
-            is_local = info.RegionalFormIndex == info.LocalFormIndex
-        elif self.game_info.context == PKHeX.Core.EntityContext.Gen8:
-            is_local = (
-                # Some regional forms don't have the IsRegionalForm flag set
-                (PKHeX.Core.Species(self.species), self.form)
-                in [
-                    (PKHeX.Core.Species.Weezing, 1),
-                    (PKHeX.Core.Species.Stunfisk, 1),
-                    (PKHeX.Core.Species.Articuno, 1),
-                    (PKHeX.Core.Species.Zapdos, 1),
-                    (PKHeX.Core.Species.Moltres, 1),
-                ]
-            )
-        elif self.game_info.context == PKHeX.Core.EntityContext.Gen8a:
-            is_local = (
-                # Sneasel is the only Pokemon with more than one regional form
-                PKHeX.Core.Species(self.species) == PKHeX.Core.Species.Sneasel
-                and self.form == 1
-            )
+        is_local = (
+            info.RegionalFormIndex == info.LocalFormIndex
+            if info.IsRegionalForm
+            else False
+        )
 
-        return (getattr(info, dex_attribute), 0 if is_local else 1)
+        if self.game_info.context == PKHeX.Core.EntityContext.Gen8 and (
+            (species, self.form)
+            in [
+                (PKHeX.Core.Species.Weezing, 1),
+                (PKHeX.Core.Species.Stunfisk, 1),
+                (PKHeX.Core.Species.Articuno, 1),
+                (PKHeX.Core.Species.Zapdos, 1),
+                (PKHeX.Core.Species.Moltres, 1),
+            ]
+        ):
+            # Sword / Shield: some regional forms don't have the IsRegionalForm flag set
+            is_local = True
+
+        if self.game_info.context == PKHeX.Core.EntityContext.Gen8a and (
+            (species, self.form) == (PKHeX.Core.Species.Sneasel, 1)
+        ):
+            # Arceus: Sneasel is the only Pokemon with more than one regional form
+            is_local = True
+
+        if self.game_info.context == PKHeX.Core.EntityContext.Gen9a and (
+            (species, self.form)
+            in [
+                (PKHeX.Core.Species.Farfetchd, 1),
+                (PKHeX.Core.Species.Yamask, 1),
+                (PKHeX.Core.Species.MrMime, 1),
+            ]
+        ):
+            # ZA: some galarian forms are erroneously set as local
+            is_local = False
+
+        return is_local
 
     def evolves_from(self, other: "PKM") -> bool:
         if self.is_egg or other.is_egg or self.is_unknown or other.is_unknown:
             return False
         tree = PKHeX.Core.EvolutionTree.GetEvolutionTree(self.game_info.context)
-        for pre in tree.Reverse.GetPreEvolutions(self.species, self._form):
+        for pre in tree.Reverse.GetPreEvolutions(self.species, self.form):
             if pre.Item1 == other.species and (
-                pre.Item2 == other._form  # noqa: SLF001
+                pre.Item2 == other.form
                 or PKHeX.Core.FormInfo.IsFormChangeable(
                     pre.Item1,
                     pre.Item2,
-                    other._form,  # noqa: SLF001
+                    other.form,
                     self.game_info.context,
                     self.game_info.context,
                 )
@@ -387,7 +402,7 @@ class PKM:
             return (-1, 0, 0)
         if self.is_unknown:
             return (-2, 0, 0)
-        return (self.species, self.form, self.form_argument)
+        return (self.species, self.normalized_form, self.form_argument)
 
 
 class LGPEStarterPKM(PKM):

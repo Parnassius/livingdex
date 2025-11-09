@@ -5,6 +5,7 @@ import json
 import math
 from abc import abstractmethod
 from collections import defaultdict
+from collections.abc import Callable
 from pathlib import Path
 
 from PIL import Image, ImageChops
@@ -75,39 +76,53 @@ class GameInfo:
             form0 = PKM(self, species_id, 0)
             if form0.is_valid:
                 data.extend(form0.forms_with_arguments)
-            if not form0.ignore_alternate_forms:
-                for form_id in range(1, len(form0.all_forms)):
-                    form = PKM(self, species_id, form_id)
-                    if form.is_valid:
-                        data.extend(form.forms_with_arguments)
+            for form_id in range(1, len(form0.all_forms)):
+                form = PKM(self, species_id, form_id)
+                if form.is_valid and form not in data:
+                    data.extend(form.forms_with_arguments)
 
-        sections = {
+        sections: dict[  # type: ignore[no-any-unimported]
+            type[PKHeX.Core.SaveFile],
+            list[str | Callable[[PKHeX.Core.PersonalInfo], int | None]],
+        ] = {
             PKHeX.Core.SAV8SWSH: ["PokeDexIndex", "ArmorDexIndex", "CrownDexIndex"],
             PKHeX.Core.SAV8LA: ["DexIndexHisui"],
             PKHeX.Core.SAV9SV: ["DexPaldea", "DexKitakami", "DexBlueberry"],
+            PKHeX.Core.SAV9ZA: [
+                lambda x: x.DexIndex if x.IsLumioseNative else None,
+                lambda x: x.DexIndex if x.IsHyperspaceNative else None,
+            ],
         }
 
         if type(self._save_file) in sections:
             dexes = sections[type(self._save_file)]
-            data_regional_dexes: dict[str, list[PKM]] = {dex: [] for dex in dexes}
+            data_regional_dexes: list[list[tuple[int, PKM]]] = [[] for _ in dexes]
             data_other = []
             for pkm in data:
-                for dex in dexes:
-                    if getattr(personal[pkm.species, pkm.form], dex, None):
-                        data_regional_dexes[dex].append(pkm)
+                for dex_id, dex in enumerate(dexes):
+                    if isinstance(dex, str):
+                        dex_index = getattr(personal[pkm.species, pkm.form], dex, None)
+                    else:
+                        dex_index = dex(personal[pkm.species, pkm.form])
+                    if dex_index:
+                        data_regional_dexes[dex_id].append((dex_index, pkm))
                         break
                 else:
                     if pkm.is_obtainable():
                         data_other.append(pkm)
 
             total_boxes = sum(
-                math.ceil(len(data) / self.box_count)
-                for data in (*data_regional_dexes.values(), data_other)
-            )
+                math.ceil(len(x) / self.box_count) for x in data_regional_dexes
+            ) + math.ceil(len(data_other) / self.box_count)
             data = []
-            for dex in dexes:
-                data_regional_dexes[dex].sort(key=lambda x: x.dex_order(dex))
-                data.extend(data_regional_dexes[dex])
+            for dex_data in data_regional_dexes:
+                data.extend(
+                    x
+                    for _, x in sorted(
+                        dex_data,
+                        key=lambda x: (x[0], not x[1].is_local_form),
+                    )
+                )
                 if total_boxes > self.box_slot_count:
                     empty_slots = 6 - len(data) % 6
                 else:
