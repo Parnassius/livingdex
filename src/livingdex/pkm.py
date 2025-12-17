@@ -130,7 +130,7 @@ class PKM:
                 self.species, self.form, self.game_info.context
             )
             or not self.is_obtainable(
-                allow_transfers=self.game_info.generation < 8, allow_mystery_gifts=True
+                allow_transfers=self.game_info.generation < 8, allow_events=True
             )
         ):
             return False
@@ -152,14 +152,14 @@ class PKM:
         return (species, self._form) not in skipped_pokemon
 
     def is_obtainable(
-        self, *, allow_transfers: bool = False, allow_mystery_gifts: bool = False
+        self, *, allow_transfers: bool = False, allow_events: bool = False
     ) -> bool:
         if PKHeX.Core.Species(self.species) == PKHeX.Core.Species.Phione:
             return PKM(
                 self.game_info, int(PKHeX.Core.Species.Manaphy), 0
             ).is_obtainable(
                 allow_transfers=allow_transfers,
-                allow_mystery_gifts=allow_mystery_gifts,
+                allow_events=allow_events,
             )
 
         if (
@@ -195,10 +195,12 @@ class PKM:
             pkm, System.ReadOnlyMemory[System.UInt16]([]), *versions
         )
         for enc in encs:
-            if not allow_mystery_gifts and enc.GetType().IsAssignableTo(
-                PKHeX.Core.MysteryGift
-            ):
-                continue
+            if not allow_events:
+                impl = enc.__implementation__
+                if isinstance(
+                    impl, PKHeX.Core.MysteryGift | PKHeX.Core.EncounterOutbreak9
+                ) or (isinstance(impl, PKHeX.Core.ITeraRaid9) and impl.IsDistribution):
+                    continue
 
             species = enc.Species
             form = enc.Form
