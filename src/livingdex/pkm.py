@@ -126,9 +126,6 @@ class PKM:
             or PKHeX.Core.FormInfo.IsTotemForm(
                 self.species, self.form, self.game_info.context
             )
-            or PKHeX.Core.FormInfo.IsLordForm(
-                self.species, self.form, self.game_info.context
-            )
             or not self.is_obtainable(
                 allow_transfers=self.game_info.generation < 8, allow_events=True
             )
