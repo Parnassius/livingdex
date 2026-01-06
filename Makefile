@@ -1,19 +1,19 @@
-.venv.dir: uv.lock
+.venv: uv.lock
 	@uv sync
-	@touch .venv.dir
+	@touch .venv
 
-.node_modules.dir: package-lock.json
+node_modules: package-lock.json
 	@npm ci
-	@touch .node_modules.dir
+	@touch node_modules
 
-.nuget.dir: packages.lock.json .venv.dir
+nuget: packages.lock.json .venv
 	@rm -rf nuget
 	@dotnet restore --packages nuget
 	@cp nuget/pkhex.core/*/lib/net*/PKHeX.Core.dll .venv/lib/python*/site-packages
 	@touch .nuget.dir
 
 .PHONY: deps
-deps: .venv.dir .node_modules.dir .nuget.dir
+deps: .venv node_modules nuget
 
 .PHONY: format
 format:
