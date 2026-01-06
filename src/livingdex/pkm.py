@@ -189,6 +189,18 @@ class PKM:
                 pkm, System.ReadOnlyMemory[System.UInt16]([]), *versions
             )
         )
+        if not allow_events:
+            non_event_encs = []
+            for enc in encs:
+                impl = enc.__implementation__
+                if not isinstance(
+                    impl, PKHeX.Core.MysteryGift | PKHeX.Core.EncounterOutbreak9
+                ) and not (
+                    isinstance(impl, PKHeX.Core.ITeraRaid9) and impl.IsDistribution
+                ):
+                    non_event_encs.append(enc)
+            encs = non_event_encs
+
         if encs and all(
             isinstance(x.__implementation__, PKHeX.Core.IEncounterEgg) for x in encs
         ):
@@ -225,13 +237,6 @@ class PKM:
             )
 
         for enc in encs:
-            if not allow_events:
-                impl = enc.__implementation__
-                if isinstance(
-                    impl, PKHeX.Core.MysteryGift | PKHeX.Core.EncounterOutbreak9
-                ) or (isinstance(impl, PKHeX.Core.ITeraRaid9) and impl.IsDistribution):
-                    continue
-
             species = enc.Species
             form = enc.Form
             if (
