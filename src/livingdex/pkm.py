@@ -149,16 +149,12 @@ class PKM:
         return (species, self._form) not in skipped_pokemon
 
     def is_obtainable(
-        self, *, allow_transfers: bool = False, allow_events: bool = False
+        self,
+        *,
+        allow_transfers: bool = False,
+        allow_events: bool = False,
+        checked_forms: set[tuple[int, int]] | None = None,
     ) -> bool:
-        if PKHeX.Core.Species(self.species) == PKHeX.Core.Species.Phione:
-            return PKM(
-                self.game_info, int(PKHeX.Core.Species.Manaphy), 0
-            ).is_obtainable(
-                allow_transfers=allow_transfers,
-                allow_events=allow_events,
-            )
-
         if (
             self.game_info.context == PKHeX.Core.EntityContext.Gen9
             and PKHeX.Core.Species(self.species) == PKHeX.Core.Species.Gimmighoul
@@ -188,9 +184,46 @@ class PKM:
                 == self.game_info.context
             ]
 
-        encs = PKHeX.Core.EncounterMovesetGenerator.GenerateEncounters(
-            pkm, System.ReadOnlyMemory[System.UInt16]([]), *versions
+        encs = list(
+            PKHeX.Core.EncounterMovesetGenerator.GenerateEncounters(
+                pkm, System.ReadOnlyMemory[System.UInt16]([]), *versions
+            )
         )
+        if encs and all(
+            isinstance(x.__implementation__, PKHeX.Core.IEncounterEgg) for x in encs
+        ):
+            if checked_forms is None:
+                checked_forms = set()
+            checked_forms.add((self.species, self._form))
+            tree = PKHeX.Core.EvolutionTree.GetEvolutionTree(self.game_info.context)
+            related = [
+                (x.Item1, x.Item2)
+                for x in tree.GetEvolutionsAndPreEvolutions(self.species, self._form)
+                if (x.Item1, x.Item2) not in checked_forms
+            ]
+            other_parents = {
+                (int(k1), k2): (int(v1), v2)
+                for k1, k2, v1, v2 in (
+                    (PKHeX.Core.Species.NidoranF, 0, PKHeX.Core.Species.NidoranM, 0),
+                    (PKHeX.Core.Species.NidoranM, 0, PKHeX.Core.Species.NidoranF, 0),
+                    (PKHeX.Core.Species.Volbeat, 0, PKHeX.Core.Species.Illumise, 0),
+                    (PKHeX.Core.Species.Illumise, 0, PKHeX.Core.Species.Volbeat, 0),
+                    (PKHeX.Core.Species.Phione, 0, PKHeX.Core.Species.Manaphy, 0),
+                    (PKHeX.Core.Species.Indeedee, 0, PKHeX.Core.Species.Indeedee, 1),
+                    (PKHeX.Core.Species.Indeedee, 1, PKHeX.Core.Species.Indeedee, 0),
+                )
+            }
+            if other_parent := other_parents.get((self.species, self._form)):
+                related.append(other_parent)
+            return any(
+                PKM(self.game_info, species, form).is_obtainable(
+                    allow_transfers=allow_transfers,
+                    allow_events=allow_events,
+                    checked_forms=checked_forms,
+                )
+                for species, form in related
+            )
+
         for enc in encs:
             if not allow_events:
                 impl = enc.__implementation__
