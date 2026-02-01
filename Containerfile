@@ -5,7 +5,7 @@ ENV PYTHONUNBUFFERED=1
 ENV DATA_PATH=/data
 WORKDIR /app
 
-RUN apk add --no-cache dotnet9-runtime
+RUN apk add --no-cache dotnet10-runtime
 
 
 FROM base as builder
@@ -16,7 +16,7 @@ ENV UV_LINK_MODE=copy
 ENV UV_NO_EDITABLE=1
 ENV UV_NO_SYNC=1
 
-RUN apk add --no-cache dotnet9-sdk
+RUN apk add --no-cache dotnet10-sdk
 
 COPY --from=ghcr.io/astral-sh/uv /uv /bin/uv
 
