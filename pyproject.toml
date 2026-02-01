@@ -6,7 +6,7 @@ dependencies = [
     "aiohttp==3.13.3",
     "aiohttp-jinja2==1.6",
     "aiohttp-sse==2.2.0",
-    "pillow==12.0.0",
+    "pillow==12.1.0",
     "pythonnet==3.0.5",
     "typenv==0.2.0",
     "watchfiles==1.1.1",
@@ -19,7 +19,7 @@ livingdex = "livingdex.__main__:main"
 dev = [
     "mypy==1.19.1",
     "pytest==9.0.2",
-    "ruff==0.14.10",
+    "ruff==0.14.14",
 ]
 
 [build-system]
