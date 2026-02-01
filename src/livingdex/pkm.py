@@ -180,7 +180,7 @@ class PKM:
                 x
                 for x in PKHeX.Core.GameVersion.GetValues(PKHeX.Core.GameVersion)
                 if PKHeX.Core.GameUtil.IsValidSavedVersion(x)
-                and PKHeX.Core.EntityContextExtensions.GetContext(x)
+                and PKHeX.Core.EntityContextExtensions.get_Context(x)
                 == self.game_info.context
             ]
 
