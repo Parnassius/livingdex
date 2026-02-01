@@ -7,7 +7,7 @@ from abc import abstractmethod
 from collections import defaultdict
 from pathlib import Path
 
-from PIL import Image, ImageChops
+from PIL import Image, ImageChops, ImageFile
 
 from livingdex.dotnet import PKHeX
 from livingdex.pkm import PKM, LGPEStarterPKM
@@ -199,7 +199,7 @@ class ScreenshotsGameInfo(PKHeXGameInfo):
         return PKHeX.Core.BlankSaveFile.Get(self.game_version)
 
     @functools.cached_property
-    def _sprites(self) -> dict[PKM, list[Image.Image]]:
+    def _sprites(self) -> dict[PKM, list[ImageFile.ImageFile]]:
         data = defaultdict(list)
         for f in self._box_sprites_path.glob("*.png"):
             if f.stem == "empty":
@@ -375,7 +375,7 @@ class InputScreenshots:
         self._unnamed_box_numbers_path.mkdir(parents=True, exist_ok=True)
 
     @functools.cached_property
-    def _game_icons(self) -> dict[str, Image.Image]:
+    def _game_icons(self) -> dict[str, ImageFile.ImageFile]:
         data = {}
         for f in self._game_icons_path.glob("*.png"):
             if not (self._base_path / f.stem).is_dir():
@@ -388,7 +388,7 @@ class InputScreenshots:
         return data
 
     @functools.cached_property
-    def _box_numbers(self) -> dict[int, Image.Image]:
+    def _box_numbers(self) -> dict[int, ImageFile.ImageFile]:
         data = {}
         for f in self._box_numbers_path.glob("*.png"):
             try:
