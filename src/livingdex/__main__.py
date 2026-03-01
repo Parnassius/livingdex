@@ -52,7 +52,7 @@ async def setup_file_watches(app: web.Application) -> None:
             async with asyncio.TaskGroup() as tg:
                 for game in games:
                     for file in changed_files:
-                        file_path = Path(file).resolve()
+                        file_path = Path(file)
                         try:
                             if any(
                                 file_path.is_relative_to(x)
