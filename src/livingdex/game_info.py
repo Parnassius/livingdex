@@ -185,7 +185,7 @@ class ScreenshotsGameInfo(PKHeXGameInfo):
     box_sprites_offset_x = 92
     box_sprites_offset_y = 76
 
-    box_sprite_max_distance = 6144
+    box_sprite_max_distance = 4096
 
     def __init__(  # type: ignore[no-any-unimported]
         self,
@@ -351,7 +351,7 @@ class ScreenshotsGameInfo(PKHeXGameInfo):
         matching_pkm = {}
         for pkm, pkm_ims in self._sprites.items():
             distance = min(_get_sprite_distance(im, pkm_im) for pkm_im in pkm_ims)
-            if distance < self.box_sprite_max_distance:
+            if distance < self.box_sprite_max_distance * 2:
                 matching_pkm[pkm] = distance
         if matching_pkm:
             best_match_pkm, best_match_distance = min(
