@@ -11,7 +11,7 @@ if TYPE_CHECKING:
 class PKM:
     def __init__(
         self,
-        game_info: "GameInfo",
+        game_info: GameInfo,
         species: int,
         form: int,
         form_argument: int = 0,
@@ -28,7 +28,7 @@ class PKM:
 
     @classmethod
     def from_pkhex(  # type: ignore[no-any-unimported]
-        cls, game_info: "GameInfo", pkm: PKHeX.Core.PKM
+        cls, game_info: GameInfo, pkm: PKHeX.Core.PKM
     ) -> Self:
         return cls(
             game_info,
@@ -366,7 +366,7 @@ class PKM:
 
         return is_local
 
-    def evolves_from(self, other: "PKM") -> bool:
+    def evolves_from(self, other: PKM) -> bool:
         if self.is_egg or other.is_egg or self.is_unknown or other.is_unknown:
             return False
         tree = PKHeX.Core.EvolutionTree.GetEvolutionTree(self.game_info.context)
@@ -426,7 +426,7 @@ class PKM:
 
 
 class LGPEStarterPKM(PKM):
-    def __init__(self, game_info: "GameInfo") -> None:
+    def __init__(self, game_info: GameInfo) -> None:
         super().__init__(game_info, 0, 0)
 
     def __str__(self) -> str:

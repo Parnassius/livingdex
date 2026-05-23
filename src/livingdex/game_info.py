@@ -282,7 +282,7 @@ class ScreenshotsGameInfo(PKHeXGameInfo):
             try:
                 with json_cache_path.open("r", encoding="utf-8") as f:
                     cache = json.load(f)
-            except (FileNotFoundError, json.JSONDecodeError):
+            except FileNotFoundError, json.JSONDecodeError:
                 pass
             else:
                 if screenshot_digest == cache["screenshot_digest"]:
