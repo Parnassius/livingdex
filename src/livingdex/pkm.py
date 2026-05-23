@@ -48,23 +48,28 @@ class PKM:
         }
 
     @property
+    def form_aliases(self) -> list[int] | None:
+        aliases = {
+            PKHeX.Core.Species.Greninja: [[0, 1]],  # Standard, Battle Bond
+            PKHeX.Core.Species.Rockruff: [[0, 1]],  # Standard, Own Tempo
+            PKHeX.Core.Species.Zygarde: [
+                [0, 3],  # Aura Break, Power Construct (50%)
+                [1, 2],  # Aura Break, Power Construct (10%)
+            ],
+        }
+        for group in aliases.get(PKHeX.Core.Species(self.species), []):
+            if self.form in group:
+                return group
+
+        return None
+
+    @property
     def normalized_form(self) -> int:
         if self.ignore_alternate_forms:
             return 0
 
-        species = PKHeX.Core.Species(self.species)
-
-        if (species, self.form) in (
-            (PKHeX.Core.Species.Greninja, 1),  # Battle Bond
-            (PKHeX.Core.Species.Rockruff, 1),  # Own Tempo
-        ):
-            return 0
-
-        if species == PKHeX.Core.Species.Zygarde:
-            if self.form == 2:  # 10%
-                return 1
-            if self.form == 3:  # 50%
-                return 0
+        if aliases := self.form_aliases:
+            return aliases[0]
 
         return self.form
 
@@ -161,6 +166,10 @@ class PKM:
         ):
             return True
 
+        if checked_forms is None:
+            checked_forms = set()
+        checked_forms.add((self.species, self.form))
+
         pkm = self.game_info.blank_pkm
         pkm.Species = self.species
         pkm.Form = self.form
@@ -203,9 +212,6 @@ class PKM:
         if encs and all(
             isinstance(x.__implementation__, PKHeX.Core.IEncounterEgg) for x in encs
         ):
-            if checked_forms is None:
-                checked_forms = set()
-            checked_forms.add((self.species, self.form))
             tree = PKHeX.Core.EvolutionTree.GetEvolutionTree(self.game_info.context)
             related = [
                 (x.Item1, x.Item2)
@@ -264,6 +270,17 @@ class PKM:
 
             if self.evolves_from(PKM(self.game_info, species, form)):
                 return True
+
+        if aliases := self.form_aliases:
+            return any(
+                PKM(self.game_info, self.species, form).is_obtainable(
+                    allow_transfers=allow_transfers,
+                    allow_events=allow_events,
+                    checked_forms=checked_forms,
+                )
+                for form in aliases
+                if form != self.form
+            )
 
         return False
 
