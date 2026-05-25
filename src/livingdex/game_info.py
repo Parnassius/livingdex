@@ -245,7 +245,7 @@ class ScreenshotsGameInfo(PKHeXGameInfo):
                 is_egg = False
             pkm = PKM(self, species, form, form_argument, is_egg)
 
-            if pkm.form >= len(pkm.all_forms) or (
+            if pkm.form >= len(pkm.get_all_forms(PKHeX.Core.Latest.Context)) or (
                 pkm.form_argument and pkm.form_argument >= len(pkm.all_form_arguments)
             ):
                 f.unlink()

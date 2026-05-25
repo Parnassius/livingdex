@@ -284,16 +284,19 @@ class PKM:
 
         return False
 
-    @property
-    def all_forms(self) -> Sequence[str]:
+    def get_all_forms(self, context: PKHeX.Core.EntityContext) -> Sequence[str]:  # type: ignore[no-any-unimported]
         strings = PKHeX.Core.GameInfo.Strings
         return PKHeX.Core.FormConverter.GetFormList(  # type: ignore[no-any-return]
             self.species,
             strings.Types,
             strings.forms,
             PKHeX.Core.GameInfo.GenderSymbolUnicode,
-            self.game_info.context,
+            context,
         )
+
+    @property
+    def all_forms(self) -> Sequence[str]:
+        return self.get_all_forms(self.game_info.context)
 
     @property
     def all_form_arguments(self) -> Sequence[str]:
