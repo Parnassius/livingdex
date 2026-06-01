@@ -84,9 +84,9 @@ main {
       align-content: center;
       &:not(
           :has(
-              ~ .box-content
-                > div:not(:is([data-slot-status="caught"], [data-slot-status="filler"]))
-            )
+            ~ .box-content
+              > div:not(:is([data-slot-status="caught"], [data-slot-status="filler"]))
+          )
         ) {
         background-color: var(--background-caught);
       }
@@ -101,8 +101,8 @@ main {
       }
       &:where(
           &:has(~ .box-content > div[data-slot-status="evo"]):has(
-              ~ .box-content > div[data-slot-status="other-game"]
-            )
+            ~ .box-content > div[data-slot-status="other-game"]
+          )
         ) {
         background-image: linear-gradient(
           to right bottom,
@@ -112,8 +112,8 @@ main {
       }
       &:where(
           &:has(~ .box-content > div[data-slot-status="evo"]):has(
-              ~ .box-content > div[data-slot-status="wrong"]
-            )
+            ~ .box-content > div[data-slot-status="wrong"]
+          )
         ) {
         background-image: linear-gradient(
           to right bottom,
@@ -124,8 +124,8 @@ main {
       &:where(
           &:has(~ .box-content > div[data-slot-status="wrong-and-other-game"]),
           &:has(~ .box-content > div[data-slot-status="other-game"]):has(
-              ~ .box-content > div[data-slot-status="wrong"]
-            )
+            ~ .box-content > div[data-slot-status="wrong"]
+          )
         ) {
         background-image: linear-gradient(
           to right bottom,
@@ -135,11 +135,11 @@ main {
       }
       &:where(
           &:has(~ .box-content > div[data-slot-status="evo"]):where(
-              &:has(~ .box-content > div[data-slot-status="wrong-and-other-game"]),
-              &:has(~ .box-content > div[data-slot-status="other-game"]):has(
-                  ~ .box-content > div[data-slot-status="wrong"]
-                )
+            &:has(~ .box-content > div[data-slot-status="wrong-and-other-game"]),
+            &:has(~ .box-content > div[data-slot-status="other-game"]):has(
+              ~ .box-content > div[data-slot-status="wrong"]
             )
+          )
         ) {
         background-image: linear-gradient(
           to right bottom,
