@@ -4,7 +4,7 @@
 
 import pythonnet
 
-pythonnet.load("coreclr")
+pythonnet.load("coreclr", runtime_version="10.0")
 import clr
 import System as System
 
