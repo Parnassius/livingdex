@@ -279,6 +279,10 @@ class BoxSprites(BaseSprites):
         slot_id: int,
         expected_key: tuple[int, int, int],
     ) -> tuple[tuple[int, int, int] | None, bool]:
+        all_sprites_path = self.sprites_path / "all" / game_icon
+        all_sprites_path.mkdir(parents=True, exist_ok=True)
+        im.save(all_sprites_path / f"{box_id + 1}-{slot_id + 1}.png")
+
         if (
             expected_key
             and expected_key in self.sprites
