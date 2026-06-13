@@ -1,14 +1,10 @@
 import functools
-import hashlib
 import itertools
 import json
 import math
 from abc import abstractmethod
-from collections import defaultdict
 from collections.abc import Callable
 from pathlib import Path
-
-from PIL import Image, ImageChops, ImageFile
 
 from livingdex.dotnet import PKHeX
 from livingdex.pkm import PKM, LGPEStarterPKM
@@ -178,15 +174,6 @@ class PKHeXGameInfo(GameInfo):
 
 
 class ScreenshotsGameInfo(PKHeXGameInfo):
-    box_rows = 5
-    box_cols = 6
-
-    box_first_sprite_coords = (684, 128, 760, 204)
-    box_sprites_offset_x = 92
-    box_sprites_offset_y = 76
-
-    box_sprite_max_distance = 4096
-
     def __init__(  # type: ignore[no-any-unimported]
         self,
         base_path: Path,
@@ -197,65 +184,13 @@ class ScreenshotsGameInfo(PKHeXGameInfo):
     ) -> None:
         self.game_version = game_version
 
-        self._cache_path = game_path / "cache"
-        self._game_box_sprites_path = game_path / "box_sprites"
-        self._box_sprites_path = base_path / "input_screenshots" / "box_sprites"
-        self._unnamed_box_sprites_path = self._box_sprites_path / "unnamed"
-
-        self._cache_path.mkdir(parents=True, exist_ok=True)
-        self._game_box_sprites_path.mkdir(parents=True, exist_ok=True)
-        self._unnamed_box_sprites_path.mkdir(parents=True, exist_ok=True)
-
+        self._egg_slot = PKM(self, 0, 0, is_egg=True)
         self._unknown_slot = PKM(self, 0, 0, is_unknown=True)
 
         super().__init__(base_path, game_path, skipped_pokemon)
 
     def _load_save_file(self) -> PKHeX.Core.SaveFile:  # type: ignore[no-any-unimported]
         return PKHeX.Core.BlankSaveFile.Get(self.game_version)
-
-    @functools.cached_property
-    def _sprites(self) -> dict[PKM, list[ImageFile.ImageFile]]:
-        data = defaultdict(list)
-        for f in self._box_sprites_path.glob("*.png"):
-            if f.stem == "empty":
-                species = 0
-                form = 0
-                form_argument = 0
-                is_egg = False
-            elif f.stem == "egg":
-                species = 0
-                form = 0
-                form_argument = 0
-                is_egg = True
-            else:
-                parts = f.stem.split("_")
-                try:
-                    species = next(
-                        i
-                        for i, x in enumerate(PKHeX.Core.GameInfo.Strings.Species)
-                        if x == parts[0]
-                    )
-                except StopIteration:
-                    f.unlink()
-                    continue
-                if len(parts) >= 2 and parts[1] in ("m", "f"):
-                    del parts[1]
-                form = int(parts[1]) if len(parts) >= 2 else 0
-                form_argument = int(parts[2]) if len(parts) >= 3 else 0
-                is_egg = False
-            pkm = PKM(self, species, form, form_argument, is_egg)
-
-            if pkm.form >= len(pkm.get_all_forms(PKHeX.Core.Latest.Context)) or (
-                pkm.form_argument and pkm.form_argument >= len(pkm.all_form_arguments)
-            ):
-                f.unlink()
-                continue
-
-            with Image.open(f) as im:
-                im.load()
-                data[pkm].append(im)
-
-        return data
 
     @functools.cached_property
     def party_data(self) -> list[PKM]:
@@ -265,215 +200,25 @@ class ScreenshotsGameInfo(PKHeXGameInfo):
     def box_data(self) -> list[list[PKM]]:
         data = []
         for box_id in range(self.box_count):
-            screenshot_path = self._game_path / f"{box_id + 1}.jpg"
-            if not screenshot_path.is_file():
+            json_path = self._game_path / f"{box_id + 1}.json"
+            if not json_path.is_file():
                 data.append([self._empty_slot] * self.box_slot_count)
                 continue
 
-            with screenshot_path.open("rb") as f:
-                screenshot_digest = hashlib.file_digest(f, "sha256").hexdigest()
-            box_sprites = sorted(x.stem for x in self._box_sprites_path.glob("*.png"))
-            box_sprites_digest = hashlib.sha256(
-                ":".join(box_sprites).encode()
-            ).hexdigest()
-
-            cached_data = None
-            json_cache_path = self._cache_path / f"{box_id + 1}.json"
-            try:
-                with json_cache_path.open("r", encoding="utf-8") as f:
-                    cache = json.load(f)
-            except FileNotFoundError, json.JSONDecodeError:
-                pass
-            else:
-                if screenshot_digest == cache["screenshot_digest"]:
-                    cached_data = [PKM(self, **params) for params in cache["data"]]
-                    if box_sprites_digest == cache["box_sprites_digest"]:
-                        data.append(cached_data)
-                        continue
-
-            with Image.open(screenshot_path) as im:
-                parsed_box_data = self._parse_box_data(im, box_id, cached_data)
-
-            data.append(parsed_box_data)
-            cache = {
-                "screenshot_digest": screenshot_digest,
-                "box_sprites_digest": box_sprites_digest,
-                "data": [pkm.to_dict() for pkm in parsed_box_data],
-            }
-            with json_cache_path.open("w", encoding="utf-8") as f:
-                json.dump(cache, f)
+            box_data = []
+            with json_path.open(encoding="utf-8") as f:
+                for pkm_args in json.load(f):
+                    if pkm_args == [0, 0, 0]:
+                        box_data.append(self._empty_slot)
+                    elif pkm_args == [-1, 0, 0]:
+                        box_data.append(self._egg_slot)
+                    elif pkm_args is None:
+                        box_data.append(self._unknown_slot)
+                    else:
+                        box_data.append(PKM(self, *pkm_args))
+            data.append(box_data)
 
         return data
-
-    def _parse_box_data(
-        self, im: Image.Image, box_id: int, cached_data: list[PKM] | None
-    ) -> list[PKM]:
-        data = []
-
-        x1, y1, x2, y2 = self.box_first_sprite_coords
-        for row in range(self.box_rows):
-            offset_y = self.box_sprites_offset_y * row
-            for col in range(self.box_cols):
-                if cached_data:
-                    cached_pkm = cached_data[row * self.box_cols + col]
-                    if not cached_pkm.is_unknown:
-                        data.append(cached_pkm)
-                        continue
-                offset_x = self.box_sprites_offset_x * col
-                coords = (
-                    x1 + offset_x,
-                    y1 + offset_y,
-                    x2 + offset_x,
-                    y2 + offset_y,
-                )
-                data.append(
-                    self._parse_box_sprite(
-                        im.crop(coords), box_id, row * self.box_cols + col
-                    )
-                )
-
-        return data
-
-    def _parse_box_sprite(self, im: Image.Image, box_id: int, slot_id: int) -> PKM:
-        im.save(self._game_box_sprites_path / f"{box_id + 1}-{slot_id + 1}.png")
-
-        try:
-            expected_pkm = self.boxable_forms[box_id][slot_id]
-        except IndexError:
-            expected_pkm = self._empty_slot
-
-        if expected_pkm in self._sprites and any(
-            _get_sprite_distance(im, pkm_im) < self.box_sprite_max_distance
-            for pkm_im in self._sprites[expected_pkm]
-        ):
-            return expected_pkm
-
-        matching_pkm = {}
-        for pkm, pkm_ims in self._sprites.items():
-            distance = min(_get_sprite_distance(im, pkm_im) for pkm_im in pkm_ims)
-            if distance < self.box_sprite_max_distance * 2:
-                matching_pkm[pkm] = distance
-        if matching_pkm:
-            best_match_pkm, best_match_distance = min(
-                matching_pkm.items(), key=lambda x: x[1]
-            )
-            if (
-                expected_pkm in matching_pkm
-                and matching_pkm[expected_pkm] < best_match_distance * 2
-            ):
-                return expected_pkm
-            return best_match_pkm
-
-        im.save(
-            self._unnamed_box_sprites_path
-            / f"{self._game_path.stem}-{box_id + 1}-{slot_id + 1}.png"
-        )
-        return self._unknown_slot
-
-
-class InputScreenshots:
-    game_icon_coords = (1185, 512, 1227, 554)
-    game_icon_max_distance = 4096
-
-    box_number_coords = (1095, 522, 1124, 541)
-    box_number_max_distance = 2048
-
-    def __init__(self, base_path: Path) -> None:
-        self._base_path = base_path
-        self._input_path = base_path / "input_screenshots"
-        self._game_icons_path = self._input_path / "game_icons"
-        self._unnamed_game_icons_path = self._game_icons_path / "unnamed"
-        self._box_numbers_path = self._input_path / "box_numbers"
-        self._unnamed_box_numbers_path = self._box_numbers_path / "unnamed"
-
-        self._unnamed_game_icons_path.mkdir(parents=True, exist_ok=True)
-        self._unnamed_box_numbers_path.mkdir(parents=True, exist_ok=True)
-
-    @functools.cached_property
-    def _game_icons(self) -> dict[str, ImageFile.ImageFile]:
-        data = {}
-        for f in self._game_icons_path.glob("*.png"):
-            if not (self._base_path / f.stem).is_dir():
-                f.unlink()
-            else:
-                with Image.open(f) as im:
-                    im.load()
-                    data[f.stem] = im
-
-        return data
-
-    @functools.cached_property
-    def _box_numbers(self) -> dict[int, ImageFile.ImageFile]:
-        data = {}
-        for f in self._box_numbers_path.glob("*.png"):
-            try:
-                num = int(f.stem)
-            except ValueError:
-                f.unlink()
-            else:
-                with Image.open(f) as im:
-                    im.load()
-                    data[num] = im
-
-        return data
-
-    def load(self) -> None:
-        for f in sorted(self._input_path.glob("*.jpg")):
-            with Image.open(f) as im:
-                game = self._parse_game_icon(im.crop(self.game_icon_coords), f.stem)
-                box_number = self._parse_box_number(
-                    im.crop(self.box_number_coords), f.stem
-                )
-            if game and box_number:
-                f.replace(self._base_path / game / f"{box_number}.jpg")
-
-    def _parse_game_icon(self, im: Image.Image, name: str) -> str | None:
-        matching_games = {}
-        for game, icon_im in self._game_icons.items():
-            distance = _get_sprite_distance(im, icon_im)
-            if distance < self.game_icon_max_distance:
-                matching_games[game] = distance
-        if matching_games:
-            return min(matching_games.keys(), key=lambda x: matching_games[x])
-
-        im.save(self._unnamed_game_icons_path / f"{name}.png")
-        return None
-
-    def _parse_box_number(self, im: Image.Image, name: str) -> int | None:
-        matching_numbers = {}
-        for number, number_im in self._box_numbers.items():
-            distance = _get_sprite_distance(im, number_im, False)
-            if distance < self.box_number_max_distance:
-                matching_numbers[number] = distance
-        if matching_numbers:
-            return min(matching_numbers.keys(), key=lambda x: matching_numbers[x])
-
-        im.save(self._unnamed_box_numbers_path / f"{name}.png")
-        return None
-
-
-def _get_sprite_distance(
-    im: Image.Image, im2: Image.Image, loose_match: bool = True
-) -> int:
-    differences = [ImageChops.difference(im, im2).getdata()]
-    if loose_match:
-        for trans_x, trans_y in itertools.product([-1, 0, 1], repeat=2):
-            if trans_x != 0 or trans_y != 0:
-                differences.append(
-                    ImageChops.difference(
-                        im,
-                        im2.transform(
-                            im2.size,
-                            Image.Transform.AFFINE,
-                            (1, 0, trans_x, 0, 1, trans_y),
-                        ),
-                    ).getdata()
-                )
-
-    return sum(
-        min(r // 8 + g // 8 + b // 8 for r, g, b in pixels)
-        for pixels in zip(*differences, strict=True)
-    )
 
 
 def load(  # type: ignore[no-any-unimported]

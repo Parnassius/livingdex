@@ -411,13 +411,13 @@ class PKM:
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, type(self)):
             return NotImplemented
-        return self._key == other._key
+        return self.key == other.key
 
     def __hash__(self) -> int:
-        return hash(self._key)
+        return hash(self.key)
 
     @property
-    def _key(self) -> tuple[int, int, int]:
+    def key(self) -> tuple[int, int, int]:
         if self.is_egg:
             return (-1, 0, 0)
         if self.is_unknown:

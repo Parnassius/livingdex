@@ -24,6 +24,7 @@ class GameData:
         self.name = name
 
         self.base_path = base_path
+        self.save_dir = save
         self.save_path = (base_path / save).resolve()
         if other_saves is None:
             self.other_saves_paths = []
