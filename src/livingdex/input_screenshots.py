@@ -54,7 +54,7 @@ class InputScreenshots:
                     expected = game.expected[box_id]
                 except IndexError:
                     expected = []
-                box_sprites, perfect_matches = self.box_sprites.identify_all(
+                box_sprites = self.box_sprites.identify_all(
                     im, game_icon, box_id, expected
                 )
 
@@ -63,7 +63,7 @@ class InputScreenshots:
                     json.dumps(box_sprites), encoding="utf-8"
                 )
 
-            if perfect_matches:
+            if all(box_sprites):
                 f.unlink()
 
         if self.unnamed_path.is_dir():
@@ -242,10 +242,8 @@ class BoxSprites(BaseSprites):
 
     def identify_all(
         self, im: Image.Image, game_icon: str, box_id: int, expected: list[PKM]
-    ) -> tuple[list[tuple[int, int, int] | None], bool]:
+    ) -> list[tuple[int, int, int] | None]:
         data = []
-        perfect_matches = True
-
         x1, y1, x2, y2 = self.sprite_coords
         for row in range(self.box_rows):
             offset_y = self.offset_y * row
@@ -262,14 +260,13 @@ class BoxSprites(BaseSprites):
                     expected_key = expected[slot_id].key
                 except IndexError:
                     expected_key = (0, 0, 0)
-                key, perfect_match = self._identify(
-                    im.crop(coords), game_icon, box_id, slot_id, expected_key
+                data.append(
+                    self._identify(
+                        im.crop(coords), game_icon, box_id, slot_id, expected_key
+                    )
                 )
-                if not perfect_match:
-                    perfect_matches = False
-                data.append(key)
 
-        return data, perfect_matches
+        return data
 
     def _identify(
         self,
@@ -278,7 +275,7 @@ class BoxSprites(BaseSprites):
         box_id: int,
         slot_id: int,
         expected_key: tuple[int, int, int],
-    ) -> tuple[tuple[int, int, int] | None, bool]:
+    ) -> tuple[int, int, int] | None:
         all_sprites_path = self.sprites_path / "all" / game_icon
         all_sprites_path.mkdir(parents=True, exist_ok=True)
         im.save(all_sprites_path / f"{box_id + 1}-{slot_id + 1}.png")
@@ -291,7 +288,7 @@ class BoxSprites(BaseSprites):
                 for pkm_im in self.sprites[expected_key]
             )
         ):
-            return expected_key, True
+            return expected_key
 
         matching = {}
         for key, pkm_ims in self.sprites.items():
@@ -305,12 +302,12 @@ class BoxSprites(BaseSprites):
                 and expected_key in matching
                 and matching[expected_key] < best_match_distance * 2
             ):
-                return expected_key, True
-            return best_match, False
+                return expected_key
+            return best_match
 
         self.unnamed_sprites_path.mkdir(parents=True, exist_ok=True)
         im.save(
             self.unnamed_sprites_path / f"{game_icon}-{box_id + 1}-{slot_id + 1}.png"
         )
 
-        return None, False
+        return None
