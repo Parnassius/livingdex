@@ -235,8 +235,16 @@ class BoxSprites(BaseSprites):
 
         if len(parts) >= 2 and parts[1] in ("m", "f"):
             del parts[1]
-        form = int(parts[1]) if len(parts) >= 2 else 0
-        form_argument = int(parts[2]) if len(parts) >= 3 else 0
+
+        try:
+            form = int(parts[1]) if len(parts) >= 2 else 0
+        except ValueError:
+            return None
+
+        try:
+            form_argument = int(parts[2]) if len(parts) >= 3 else 0
+        except ValueError:
+            return None
 
         return (species, form, form_argument)
 
