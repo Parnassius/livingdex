@@ -199,6 +199,7 @@ class BoxSprites(BaseSprites):
     box_cols = 6
 
     sprite_coords = (684, 128, 760, 204)
+    sprite_empty_max_distance = 1024
     sprite_max_distance = 4096
 
     offset_x = 92
@@ -287,6 +288,13 @@ class BoxSprites(BaseSprites):
         all_sprites_path = self.sprites_path / "all" / game_icon
         all_sprites_path.mkdir(parents=True, exist_ok=True)
         im.save(all_sprites_path / f"{box_id + 1}-{slot_id + 1}.png")
+
+        empty_key = (0, 0, 0)
+        if empty_key in self.sprites and any(
+            self._get_sprite_distance(im, pkm_im) < self.sprite_empty_max_distance
+            for pkm_im in self.sprites[empty_key]
+        ):
+            return empty_key
 
         if (
             expected_key
