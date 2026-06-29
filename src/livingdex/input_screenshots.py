@@ -1,6 +1,7 @@
 import functools
 import itertools
 import json
+import shutil
 from abc import abstractmethod
 from collections import defaultdict
 from contextlib import suppress
@@ -66,12 +67,8 @@ class InputScreenshots:
             if all(box_sprites):
                 f.unlink()
 
-        if self.unnamed_path.is_dir():
-            for subdir in self.unnamed_path.iterdir():
-                with suppress(OSError):
-                    subdir.rmdir()
-            with suppress(OSError):
-                self.unnamed_path.rmdir()
+        if self.unnamed_path.is_dir() and not any(self.input_path.glob("*.jpg")):
+            shutil.rmtree(self.unnamed_path)
 
     def setup_watches(self) -> None:
         for changes in watchfiles.watch(
