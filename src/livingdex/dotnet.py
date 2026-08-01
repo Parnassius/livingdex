@@ -1,5 +1,5 @@
 # mypy: disable-error-code="import-untyped,import-not-found"
-# ruff: noqa: E402
+# ruff: noqa: PLC0414
 
 
 import pythonnet
