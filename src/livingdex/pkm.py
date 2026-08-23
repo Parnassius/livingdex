@@ -448,6 +448,8 @@ class LGPEStarterPKM(PKM):
             return False
         return self.is_starter(other.species, other.form)
 
+    __hash__ = PKM.__hash__
+
     @staticmethod
     def is_starter(species: int, form: int) -> bool:
         return (PKHeX.Core.Species(species), form) in (
