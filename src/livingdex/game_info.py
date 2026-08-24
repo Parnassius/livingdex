@@ -199,11 +199,10 @@ class ScreenshotsGameInfo(PKHeXGameInfo):
     @functools.cached_property
     def box_data(self) -> list[list[PKM]]:
         data = []
-        for box_id in range(self.box_count):
-            json_path = self._game_path / f"{box_id + 1}.json"
+        for box_number in itertools.count(1):
+            json_path = self._game_path / f"{box_number}.json"
             if not json_path.is_file():
-                data.append([self._empty_slot] * self.box_slot_count)
-                continue
+                break
 
             box_data = []
             with json_path.open(encoding="utf-8") as f:
@@ -217,6 +216,9 @@ class ScreenshotsGameInfo(PKHeXGameInfo):
                     else:
                         box_data.append(PKM(self, *pkm_args))
             data.append(box_data)
+
+        if isinstance(self._save_file, PKHeX.Core.SAV7b):
+            data = [[x for box in data for x in box]]
 
         return data
 

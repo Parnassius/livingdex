@@ -1,6 +1,7 @@
 import functools
 import itertools
 import json
+import math
 import shutil
 from abc import abstractmethod
 from collections import defaultdict
@@ -59,7 +60,12 @@ class InputScreenshots:
                     im, game_icon, box_id, expected
                 )
 
-            if box_id < len(game.expected):
+            num_boxes = len(game.expected)
+            if num_boxes == 1:
+                # HOME handles LGPE storage as standard 6x5 boxes
+                num_boxes = math.ceil(len(game.expected[0]) / 30)
+
+            if box_id < num_boxes:
                 (game.save_path / f"{box_number}.json").write_text(
                     json.dumps(box_sprites), encoding="utf-8"
                 )
