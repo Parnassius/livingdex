@@ -35,7 +35,7 @@
               {% if pokemon %}
                 {% set slot_status = "missing" %}
                 {% set small_text = None %}
-                {% if game_data[box_id][loop.index0] %}
+                {% if game_data|length > box_id and game_data[box_id][loop.index0] %}
                   {% if pokemon == game_data[box_id][loop.index0] %}
                     {% set slot_status = "caught" %}
                   {% elif pokemon.evolves_from(game_data[box_id][loop.index0]) %}
