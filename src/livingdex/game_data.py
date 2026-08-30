@@ -69,12 +69,12 @@ class GameData:
             box_data = []
             for pokemon_id, pokemon in enumerate(box):
                 if pokemon:
-                    data_pokemon = self.data[box_id][pokemon_id]
                     if (
                         len(self.data) > box_id
                         and len(self.data[box_id]) > pokemon_id
-                        and data_pokemon
+                        and self.data[box_id][pokemon_id]
                     ):
+                        data_pokemon = self.data[box_id][pokemon_id]
                         if pokemon == data_pokemon:
                             box_data.append("caught")
                         elif pokemon.evolves_from(data_pokemon):

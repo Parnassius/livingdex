@@ -112,7 +112,9 @@ class BaseSprites:
         self.sprites_path = input_path / self.dir_name
         self.unnamed_sprites_path = unnamed_path / self.dir_name
 
-    def _get_sprite_distance(self, im: Image.Image, im2: Image.Image) -> int:
+    def _get_sprite_distance(
+        self, im: Image.Image, im2: Image.Image, max_distance: int
+    ) -> int | None:
         differences = [ImageChops.difference(im, im2).getdata()]
         if self.sprite_loose_match:
             for trans_x, trans_y in itertools.product([-1, 0, 1], repeat=2):
@@ -128,10 +130,12 @@ class BaseSprites:
                         ).getdata()
                     )
 
-        return sum(
-            min(r // 8 + g // 8 + b // 8 for r, g, b in pixels)
-            for pixels in zip(*differences, strict=True)
-        )
+        distance = 0
+        for pixels in zip(*differences, strict=True):
+            distance += min(r // 8 + g // 8 + b // 8 for r, g, b in pixels)
+            if distance >= max_distance:
+                return None
+        return distance
 
 
 class SingleSprites(BaseSprites):
@@ -157,8 +161,8 @@ class SingleSprites(BaseSprites):
 
         matching = {}
         for key, val in self.sprites.items():
-            distance = self._get_sprite_distance(im, val)
-            if distance < self.sprite_max_distance:
+            distance = self._get_sprite_distance(im, val, self.sprite_max_distance)
+            if distance is not None:
                 matching[key] = distance
         if matching:
             return min(matching.keys(), key=lambda x: matching[x])
@@ -294,7 +298,8 @@ class BoxSprites(BaseSprites):
 
         empty_key = (0, 0, 0)
         if empty_key in self.sprites and any(
-            self._get_sprite_distance(im, pkm_im) < self.sprite_empty_max_distance
+            self._get_sprite_distance(im, pkm_im, self.sprite_empty_max_distance)
+            is not None
             for pkm_im in self.sprites[empty_key]
         ):
             return empty_key
@@ -303,7 +308,8 @@ class BoxSprites(BaseSprites):
             expected_key
             and expected_key in self.sprites
             and any(
-                self._get_sprite_distance(im, pkm_im) < self.sprite_max_distance
+                self._get_sprite_distance(im, pkm_im, self.sprite_max_distance)
+                is not None
                 for pkm_im in self.sprites[expected_key]
             )
         ):
@@ -311,9 +317,13 @@ class BoxSprites(BaseSprites):
 
         matching = {}
         for key, pkm_ims in self.sprites.items():
-            distance = min(self._get_sprite_distance(im, pkm_im) for pkm_im in pkm_ims)
-            if distance < self.sprite_max_distance * 2:
-                matching[key] = distance
+            min_distance = self.sprite_max_distance * 2
+            for pkm_im in pkm_ims:
+                new_distance = self._get_sprite_distance(im, pkm_im, min_distance)
+                if new_distance is not None:
+                    min_distance = new_distance
+            if min_distance < self.sprite_max_distance * 2:
+                matching[key] = min_distance
         if matching:
             best_match, best_match_distance = min(matching.items(), key=lambda x: x[1])
             if (
