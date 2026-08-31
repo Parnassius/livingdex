@@ -14,6 +14,10 @@ nuget: packages.lock.json
 deps: .venv node_modules nuget
 	@cp nuget/pkhex.core/*/lib/net*/PKHeX.Core.dll .venv/lib/python*/site-packages
 
+.PHONY: run
+run: deps
+	@uv run livingdex
+
 .PHONY: format
 format: deps
 	@uv run ruff check src tests --fix-only
