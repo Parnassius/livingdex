@@ -11,12 +11,12 @@ function onSseBoxes(event) {
   const boxElements = document.querySelectorAll("main .box");
   for (const [boxId, box] of data.entries()) {
     const slotElements = boxElements[boxId].querySelectorAll(".box-content > div");
-    for (const [slotId, slot] of box.entries()) {
+    for (const [slotId, [pokemon, slotStatus, smallText]] of box.entries()) {
       const el = slotElements[slotId];
-      const [status, text] = slot.split("|");
-      el.dataset.slotStatus = status;
-      if (text) {
-        el.dataset.smallText = text;
+      el.textContent = pokemon;
+      el.dataset.slotStatus = slotStatus;
+      if (smallText) {
+        el.dataset.smallText = smallText;
       } else {
         delete el.dataset.smallText;
       }

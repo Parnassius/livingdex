@@ -26,41 +26,18 @@
       </menu>
     </header>
     <main data-box-size="{{ box_size }}">
-      {% for box_data in expected_data %}
+      {% for box_data in data %}
         {% set box_id = loop.index0 %}
         <section class="box">
           <div class="box-label">{{ loop.index }}</div>
           <div class="box-content">
-            {% for pokemon in box_data %}
-              {% if pokemon %}
-                {% set slot_status = "missing" %}
-                {% set small_text = None %}
-                {% if game_data|length > box_id and game_data[box_id][loop.index0] %}
-                  {% if pokemon == game_data[box_id][loop.index0] %}
-                    {% set slot_status = "caught" %}
-                  {% elif pokemon.evolves_from(game_data[box_id][loop.index0]) %}
-                    {% set slot_status = "evo" %}
-                    {% set small_text = game_data[box_id][loop.index0] %}
-                  {% elif pokemon in other_saves_data %}
-                    {% set slot_status = "wrong-and-other-game" %}
-                    {% set small_text = game_data[box_id][loop.index0] ~ " / " ~ other_saves_data[pokemon] %}
-                  {% else %}
-                    {% set slot_status = "wrong" %}
-                    {% set small_text = game_data[box_id][loop.index0] %}
-                  {% endif %}
-                {% elif pokemon in other_saves_data %}
-                  {% set slot_status = "other-game" %}
-                  {% set small_text = other_saves_data[pokemon] %}
-                {% endif %}
-                <div
-                  data-slot-status="{{ slot_status }}"
-                  {% if small_text %}data-small-text="{{ small_text }}"{% endif %}
-                >
-                  {{ pokemon }}
-                </div>
-              {% else %}
-                <div data-slot-status="filler"></div>
-              {% endif %}
+            {% for pokemon, slot_status, small_text in box_data %}
+              <div
+                data-slot-status="{{ slot_status }}"
+                {% if small_text %}data-small-text="{{ small_text }}"{% endif %}
+              >
+                {{ pokemon }}
+              </div>
             {% endfor %}
           </div>
         </section>

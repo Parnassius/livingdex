@@ -1,4 +1,5 @@
 import asyncio
+import json
 from collections.abc import Mapping
 from typing import Any
 
@@ -33,9 +34,7 @@ async def game(request: web.Request) -> Mapping[str, Any]:
         "current_game": game.name,
         "current_game_id": game_id,
         "all_games": all_games,
-        "expected_data": game.expected,
-        "game_data": game.data,
-        "other_saves_data": game.other_saves_data,
+        "data": game.parsed_data,
         "box_size": game.box_size,
         "timestamp": max(x.timestamp for x in all_games.values()),
     }
@@ -93,5 +92,7 @@ async def send_sse_updates(
             )
             if game_id == game.game_id:
                 tg.create_task(
-                    _send_update(stream, game.json_data, game.timestamp, "boxes")
+                    _send_update(
+                        stream, json.dumps(game.parsed_data), game.timestamp, "boxes"
+                    )
                 )

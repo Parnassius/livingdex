@@ -1,6 +1,5 @@
 import asyncio
 import functools
-import json
 import time
 from contextlib import suppress
 from pathlib import Path
@@ -63,11 +62,13 @@ class GameData:
         return sum(1 for box in self.expected for pokemon in box if pokemon)
 
     @functools.cached_property
-    def json_data(self) -> str:
+    def parsed_data(self) -> list[list[tuple[str, str, str | None]]]:
         data = []
         for box_id, box in enumerate(self.expected):
             box_data = []
             for pokemon_id, pokemon in enumerate(box):
+                slot_status = "filler"
+                small_text = None
                 if pokemon:
                     if (
                         len(self.data) > box_id
@@ -76,25 +77,27 @@ class GameData:
                     ):
                         data_pokemon = self.data[box_id][pokemon_id]
                         if pokemon == data_pokemon:
-                            box_data.append("caught")
+                            slot_status = "caught"
                         elif pokemon.evolves_from(data_pokemon):
-                            box_data.append(f"evo|{data_pokemon}")
+                            slot_status = "evo"
+                            small_text = str(data_pokemon)
                         elif pokemon in self.other_saves_data:
-                            box_data.append(
-                                "wrong-and-other-game|"
+                            slot_status = "wrong-and-other-game"
+                            small_text = (
                                 f"{data_pokemon} / {self.other_saves_data[pokemon]}"
                             )
                         else:
-                            box_data.append(f"wrong|{data_pokemon}")
+                            slot_status = "wrong"
+                            small_text = str(data_pokemon)
                     elif pokemon in self.other_saves_data:
-                        box_data.append(f"other-game|{self.other_saves_data[pokemon]}")
+                        slot_status = "other-game"
+                        small_text = str(self.other_saves_data[pokemon])
                     else:
-                        box_data.append("missing")
-                else:
-                    box_data.append("filler")
+                        slot_status = "missing"
+                box_data.append((str(pokemon), slot_status, small_text))
             data.append(box_data)
 
-        return json.dumps(data)
+        return data
 
     async def load_data(self) -> None:
         save, other_saves = await asyncio.to_thread(self._load_game_info)
