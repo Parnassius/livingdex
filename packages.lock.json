@@ -5,8 +5,8 @@
       "PKHeX.Core": {
         "type": "Direct",
         "requested": "[*, )",
-        "resolved": "26.5.5",
-        "contentHash": "5rHGUxdoAfDN4NEwKVyQvsNIlZrLXy1DX9WHAQJOWsOLq84KaA5fQ67zrwriUBtHk59iFr8AbYbMTTLDRfuTMg=="
+        "resolved": "26.8.26",
+        "contentHash": "4xdfdIb4lSHnxn9lkLdGvXUubsWmSYZjynSe2XQVHYzHR1H/yoRgeoLHlyiJT5TknqrKgLDVvC6pJNO0iq53NA=="
       }
     }
   }
